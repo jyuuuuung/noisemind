@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>노이즈 캐치마인드</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0A0A0A;
+    --surface-1:#161616;
+    --surface-2:#202020;
+    --hairline:rgba(255,255,255,0.08);
+    --hairline-soft:rgba(255,255,255,0.05);
+    --ink:#FFFFFF;
+    --ink-muted:#999999;
+    --ink-dim:#666666;
+    --accent:#0099FF;
+    --success:#22C55E;
+    --warn:#F59E0B;
+    --danger:#EF4444;
+    --grad-violet:linear-gradient(135deg,#7C3AED 0%,#A855F7 50%,#EC4899 100%);
+    --grad-magenta:linear-gradient(135deg,#EC4899 0%,#F43F5E 50%,#F97316 100%);
+    --grad-orange:linear-gradient(135deg,#F97316 0%,#F59E0B 50%,#FBBF24 100%);
+    --grad-coral:linear-gradient(135deg,#FB7185 0%,#F472B6 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    font-family:'Inter','Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif;
+    font-feature-settings:'cv01','cv05','cv09','cv11','ss03','ss07','dlig';
+    background:var(--canvas);color:var(--ink);
+    user-select:none;-webkit-user-select:none;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;border-bottom:1px solid var(--hairline);
+    font-size:12px;color:var(--ink-muted);letter-spacing:-0.12px;
+  }
+  .topbar .brand{color:var(--ink);font-weight:500;letter-spacing:-0.2px}
+  .topbar .meta{display:flex;gap:16px;align-items:center}
+  .topbar .meta .dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;margin-right:6px;vertical-align:middle}
+  .topbar button.sound{
+    background:transparent;border:1px solid var(--hairline);color:var(--ink-muted);
+    border-radius:100px;padding:4px 10px;font-size:11px;cursor:pointer;
+    font-family:inherit;letter-spacing:-0.1px;
+  }
+  .topbar button.sound:hover{color:var(--ink);border-color:rgba(255,255,255,0.2)}
+
+  .stage{position:relative;overflow:hidden}
+  .screen{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    padding:24px 32px;
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .screen.active{opacity:1;pointer-events:auto}
+
+  /* Header slot — fixed position across screens */
+  .header-slot{flex-shrink:0;padding-bottom:16px;border-bottom:1px solid var(--hairline);margin-bottom:20px}
+  .header-slot.compact{padding-bottom:8px;margin-bottom:12px}
+  .eyebrow-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-muted);letter-spacing:0.5px;text-transform:uppercase}
+  .h-title{font-size:48px;font-weight:500;letter-spacing:-2.4px;line-height:1;color:var(--ink);margin-bottom:8px}
+  .h-sub{font-size:18px;font-weight:400;letter-spacing:-0.18px;line-height:1.35;color:var(--ink-muted);max-width:760px}
+  .h-title.small{font-size:32px;letter-spacing:-1.6px}
+
+  /* Chips */
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:100px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.4px;
+    background:var(--surface-1);color:var(--ink-muted);
+    border:1px solid var(--hairline);
+  }
+  .chip.accent{color:var(--accent);border-color:rgba(0,153,255,0.3)}
+  .chip.success{color:var(--success);border-color:rgba(34,197,94,0.3)}
+  .chip.warn{color:var(--warn);border-color:rgba(245,158,11,0.3)}
+  .chip.danger{color:var(--danger);border-color:rgba(239,68,68,0.3)}
+  .chip.solid{background:var(--ink);color:var(--canvas);border-color:transparent;font-weight:500}
+
+  /* Buttons */
+  .btn{
+    font-family:inherit;font-size:14px;font-weight:500;letter-spacing:-0.14px;
+    padding:10px 18px;border-radius:100px;cursor:pointer;border:1px solid transparent;
+    display:inline-flex;align-items:center;gap:8px;line-height:1;
+    transition:transform .12s ease,background .15s ease;
+  }
+  .btn:active{transform:scale(0.97)}
+  .btn-primary{background:var(--ink);color:var(--canvas)}
+  .btn-primary:hover{background:#f0f0f0}
+  .btn-secondary{background:var(--surface-1);color:var(--ink);border-color:var(--hairline)}
+  .btn-secondary:hover{background:var(--surface-2)}
+  .btn-ghost{background:transparent;color:var(--ink-muted);border:1px solid var(--hairline)}
+  .btn-ghost:hover{color:var(--ink);border-color:rgba(255,255,255,0.2)}
+  .btn-lg{padding:14px 22px;font-size:15px}
+
+  /* Body area */
+  .body-area{flex:1;display:flex;flex-direction:column;min-height:0}
+
+  /* ===== Setup / Lobby ===== */
+  .lobby{display:flex;flex-direction:column;flex:1;min-height:0;gap:14px}
+  .player-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:8px}
+  .player-list::-webkit-scrollbar{width:6px}
+  .player-list::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:3px}
+  .player-row{
+    display:flex;align-items:center;gap:14px;
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:14px;padding:12px 14px;
+  }
+  .player-row .num{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);
+    width:28px;letter-spacing:0.4px;
+  }
+  .player-row input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--ink);font-family:inherit;font-size:16px;letter-spacing:-0.16px;font-weight:500;
+  }
+  .player-row input::placeholder{color:var(--ink-dim)}
+  .player-row .remove{
+    background:transparent;border:none;color:var(--ink-dim);cursor:pointer;
+    font-size:18px;padding:4px 8px;border-radius:6px;
+  }
+  .player-row .remove:hover{color:var(--danger);background:rgba(239,68,68,0.08)}
+  .lobby-actions{display:flex;justify-content:space-between;align-items:center;padding-top:4px}
+
+  /* ===== Centered screens ===== */
+  .centered{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;min-height:0}
+  .centered .big-card{
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:20px;padding:40px 56px;text-align:center;
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    min-width:480px;
+  }
+  .word-display{
+    font-size:72px;font-weight:500;letter-spacing:-3.6px;color:var(--ink);
+    padding:8px 0;
+  }
+  .word-display.hidden-state{font-size:20px;color:var(--ink-muted);letter-spacing:-0.2px;font-weight:400}
+
+  /* ===== Preview previous drawing — FIXED LAYOUT ===== */
+  .preview-body{flex:1;display:flex;flex-direction:column;min-height:0;gap:14px}
+  .preview-canvas-frame{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;
+    min-height:0;
+  }
+  .preview-canvas-inner{
+    height:100%;aspect-ratio:4/3;max-width:100%;
+    background:#fff;border-radius:14px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .preview-canvas-inner canvas{width:100%;height:100%;display:block}
+  .preview-actions{
+    flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;
+    padding-top:8px;border-top:1px solid var(--hairline);
+  }
+  .preview-hint{font-size:13px;color:var(--ink-muted);letter-spacing:-0.13px;display:flex;align-items:center;gap:8px}
+
+  /* ===== Drawing screen — maximize canvas ===== */
+  .draw-screen{padding:14px 18px}
+  .draw-bar{
+    flex-shrink:0;display:flex;align-items:center;gap:12px;
+    padding:6px 4px 12px;
+  }
+  .draw-bar .left{display:flex;gap:8px;align-items:center}
+  .draw-bar .timer-wrap{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+  .timer-bar{
+    flex:1;height:10px;background:var(--surface-1);border-radius:100px;overflow:hidden;
+    border:1px solid var(--hairline);position:relative;
+  }
+  .timer-fill{
+    height:100%;
+    background:linear-gradient(90deg,#22C55E 0%,#0099FF 50%,#A855F7 100%);
+    border-radius:100px;
+    transition:width 1s linear;
+    position:relative;overflow:hidden;
+  }
+  .timer-fill::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%);
+    animation:shimmer 2s linear infinite;
+  }
+  @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .timer-fill.warn{background:linear-gradient(90deg,#F59E0B 0%,#F97316 100%)}
+  .timer-fill.danger{
+    background:linear-gradient(90deg,#EF4444 0%,#F43F5E 100%);
+    animation:dangerpulse 0.8s ease-in-out infinite;
+  }
+  @keyframes dangerpulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+    50%{box-shadow:0 0 12px 2px rgba(239,68,68,0.6)}
+  }
+  .timer-num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-muted);min-width:36px;text-align:right}
+  .timer-num.warn{color:var(--warn)}
+  .timer-num.danger{color:var(--danger);animation:numblink 0.6s ease-in-out infinite}
+  @keyframes numblink{0%,100%{opacity:1}50%{opacity:0.5}}
+
+  .canvas-host{
+    flex:1;min-height:0;background:#fff;border-radius:14px;overflow:hidden;
+    position:relative;
+  }
+  .canvas-host canvas{
+    position:absolute;inset:0;width:100%;height:100%;
+    touch-action:none;cursor:crosshair;
+  }
+  .draw-tools{
+    flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding-top:12px;
+  }
+  .draw-tools .group{display:flex;align-items:center;gap:6px}
+  .swatch{
+    width:30px;height:30px;border-radius:50%;cursor:pointer;
+    border:2px solid var(--hairline);transition:transform .12s,border-color .12s;
+  }
+  .swatch.active{border-color:var(--ink);transform:scale(1.1)}
+  .swatch.eraser{
+    border-radius:8px;background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-muted);font-size:13px;
+  }
+  .swatch.eraser.active{color:var(--ink)}
+  .brush-size{
+    width:30px;height:30px;border-radius:8px;background:var(--surface-1);
+    border:1px solid var(--hairline);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color .12s;
+  }
+  .brush-size.active{border-color:var(--ink)}
+  .brush-size .dot{background:var(--ink);border-radius:50%}
+
+  /* ===== Math screen — big problem ===== */
+  .math-body{flex:1;display:grid;grid-template-columns:1fr 220px;gap:24px;min-height:0}
+  .math-main{
+    display:flex;flex-direction:column;background:var(--surface-1);
+    border:1px solid var(--hairline);border-radius:20px;padding:24px;min-height:0;
+  }
+  .math-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .math-question-area{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:20px 0;min-height:0;
+  }
+  .math-question{
+    font-size:80px;font-weight:500;letter-spacing:-3px;color:var(--ink);
+    line-height:1;
+  }
+  .math-question sup{font-size:0.5em;vertical-align:super}
+  .math-progress{height:4px;background:var(--surface-2);border-radius:100px;margin:8px 0 16px;overflow:hidden}
+  .math-progress-fill{height:100%;background:var(--ink);transition:width .3s ease}
+  .math-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .math-option{
+    background:var(--surface-2);border:1px solid var(--hairline);
+    color:var(--ink);font-family:inherit;font-size:22px;font-weight:500;letter-spacing:-0.4px;
+    padding:18px 16px;border-radius:14px;cursor:pointer;
+    transition:background .15s,border-color .15s,transform .1s;
+  }
+  .math-option:hover{background:#2a2a2a;border-color:rgba(255,255,255,0.18)}
+  .math-option:active{transform:scale(0.98)}
+  .math-option.correct{background:rgba(34,197,94,0.15);border-color:var(--success);color:var(--success)}
+  .math-option.wrong{background:rgba(239,68,68,0.15);border-color:var(--danger);color:var(--danger)}
+
+  .math-side{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .live-card{
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;
+  }
+  .live-card .label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-muted);letter-spacing:0.5px}
+  .live-canvas-wrap{
+    aspect-ratio:4/3;background:#fff;border-radius:10px;overflow:hidden;
+  }
+  .live-canvas-wrap canvas{width:100%;height:100%;display:block}
+  .live-stats{display:flex;justify-content:space-between;gap:8px}
+  .stat-mini{flex:1;display:flex;flex-direction:column;gap:2px}
+  .stat-mini .v{font-size:18px;font-weight:500;letter-spacing:-0.5px;color:var(--ink)}
+  .stat-mini .v.success{color:var(--success)}
+  .stat-mini .v.warn{color:var(--warn)}
+  .stat-mini .v.danger{color:var(--danger)}
+  .stat-mini .l{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-muted);letter-spacing:0.4px}
+
+  /* ===== AI processing ===== */
+  .ai-body{flex:1;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;min-height:0}
+  .ai-card{
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:20px;padding:28px 32px;
+    display:flex;flex-direction:column;gap:16px;align-items:center;
+    min-width:520px;
+  }
+  .ai-preview-wrap{
+    width:380px;aspect-ratio:4/3;background:#fff;border-radius:14px;overflow:hidden;
+  }
+  .ai-preview-wrap canvas{width:100%;height:100%;display:block}
+  .ai-stats-row{display:flex;gap:32px;align-items:center}
+  .ai-stat{display:flex;flex-direction:column;gap:4px;text-align:center}
+  .ai-stat .v{font-size:32px;font-weight:500;letter-spacing:-1.5px;color:var(--ink);font-family:'JetBrains Mono',monospace}
+  .ai-stat .v.success{color:var(--success)}
+  .ai-stat .v.warn{color:var(--warn)}
+  .ai-stat .v.danger{color:var(--danger)}
+  .ai-stat .l{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-muted);letter-spacing:0.5px}
+  .ai-divider{width:1px;height:32px;background:var(--hairline)}
+
+  /* ===== Final guess ===== */
+  .guess-body{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0}
+  .guess-canvas-frame{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+  .guess-canvas-inner{height:100%;aspect-ratio:4/3;max-width:100%;background:#fff;border-radius:14px;overflow:hidden}
+  .guess-canvas-inner canvas{width:100%;height:100%;display:block}
+  .guess-input-row{
+    flex-shrink:0;display:flex;gap:12px;align-items:center;
+    padding-top:8px;border-top:1px solid var(--hairline);
+  }
+  .guess-input{
+    flex:1;background:var(--surface-1);border:1px solid var(--hairline);
+    color:var(--ink);font-family:inherit;font-size:18px;letter-spacing:-0.2px;font-weight:500;
+    padding:12px 16px;border-radius:12px;outline:none;
+  }
+  .guess-input:focus{box-shadow:0 0 0 1px rgba(0,153,255,0.5)}
+
+  /* ===== Result ===== */
+  .result-body{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+  .result-summary{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:16px;padding:16px 20px;flex-shrink:0;
+  }
+  .result-summary .col{display:flex;flex-direction:column;gap:4px}
+  .result-summary .col + .col{border-left:1px solid var(--hairline);padding-left:20px}
+  .result-summary .col .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-muted);letter-spacing:0.5px}
+  .result-summary .col .val{font-size:24px;font-weight:500;letter-spacing:-0.8px}
+  .timeline{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:6px}
+  .timeline::-webkit-scrollbar{width:6px}
+  .timeline::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:3px}
+  .timeline-row{
+    display:grid;grid-template-columns:160px 1fr 1fr;gap:12px;
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:14px;padding:12px;align-items:center;
+  }
+  .timeline-row .meta{display:flex;flex-direction:column;gap:4px}
+  .timeline-row .meta .name{font-size:14px;font-weight:500;color:var(--ink)}
+  .timeline-row .img-wrap{aspect-ratio:4/3;background:#fff;border-radius:10px;overflow:hidden}
+  .timeline-row .img-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+  .result-actions{flex-shrink:0;display:flex;justify-content:flex-end;padding-top:6px}
+
+  /* Modal */
+  .modal-back{
+    position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:24px;
+  }
+  .modal-back.show{display:flex}
+  .modal{
+    background:var(--surface-1);border:1px solid var(--hairline);
+    border-radius:20px;padding:28px;max-width:420px;width:100%;
+    display:flex;flex-direction:column;gap:14px;text-align:center;
+  }
+  .modal h4{font-size:20px;font-weight:500;letter-spacing:-0.6px}
+  .modal p{font-size:14px;color:var(--ink-muted);letter-spacing:-0.14px;line-height:1.45}
+
+  .text-success{color:var(--success)}
+  .text-danger{color:var(--danger)}
+  .text-accent{color:var(--accent)}
+  .text-muted{color:var(--ink-muted)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">노이즈 캐치마인드</div>
+    <div class="meta">
+      <span><span class="dot"></span>AI 릴레이 드로잉 · 중1 정수와 유리수</span>
+      <button id="soundBtn" class="sound" onclick="toggleSound()">🔊 SOUND ON</button>
+    </div>
+  </div>
+
+  <!-- Stage -->
+  <div class="stage" id="stage">
+
+    <!-- 1. SETUP / LOBBY -->
+    <div class="screen active" id="screen-setup">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow">CHAPTER 00 — SETUP</span>
+          <span class="chip" id="setup-player-count">PLAYERS · 3</span>
+        </div>
+        <h1 class="h-title">플레이어 명단</h1>
+        <p class="h-sub">함께 플레이할 사람들의 이름을 적어주세요. 최소 3명이 필요합니다.</p>
+      </div>
+      <div class="body-area">
+        <div class="lobby">
+          <div class="player-list" id="playerList"></div>
+          <div class="lobby-actions">
+            <button class="btn btn-ghost" onclick="addPlayerInput()">+ 플레이어 추가</button>
+            <button class="btn btn-primary btn-lg" onclick="startGame()">게임 시작 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. TRANSITION -->
+    <div class="screen" id="screen-transition">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow" id="transition-eyebrow">CHAPTER NN — HANDOFF</span>
+          <span class="chip warn">PASS DEVICE</span>
+        </div>
+        <h1 class="h-title">기기를 다음 사람에게</h1>
+        <p class="h-sub">화면을 가린 채 기기를 넘기세요. 이전 사람의 정보가 보이지 않도록 설계되어 있습니다.</p>
+      </div>
+      <div class="body-area">
+        <div class="centered">
+          <div class="big-card">
+            <span class="eyebrow">NEXT TURN</span>
+            <div class="word-display" id="transition-name">플레이어</div>
+            <span class="text-muted" style="font-size:13px">위 플레이어가 직접 기기를 받았는지 확인한 뒤 진행하세요.</span>
+            <button class="btn btn-primary btn-lg" style="margin-top:10px" onclick="confirmTransition()">준비 완료 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. WORD REVEAL -->
+    <div class="screen" id="screen-word">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow">CHAPTER 01 — WORD REVEAL</span>
+          <span class="chip accent" id="word-player-chip">PLAYER · —</span>
+        </div>
+        <h1 class="h-title">당신만 확인하세요</h1>
+        <p class="h-sub">화면을 가린 뒤 단어를 확인하세요. 다른 사람에게 절대 보여주거나 알려주지 마세요.</p>
+      </div>
+      <div class="body-area">
+        <div class="centered">
+          <div class="big-card" id="word-card">
+            <span class="eyebrow">SECRET WORD</span>
+            <div class="word-display hidden-state" id="word-display">[ 가려져 있음 ]</div>
+            <button class="btn btn-secondary" id="word-reveal-btn" onclick="revealWord()">👁  단어 보기</button>
+            <button class="btn btn-primary btn-lg" id="word-start-btn" style="display:none;margin-top:8px" onclick="goToDrawing()">그리러 가기 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. PREVIEW PREVIOUS DRAWING -->
+    <div class="screen" id="screen-preview">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow" id="preview-eyebrow">CHAPTER NN — ANALYSIS</span>
+          <span class="chip accent" id="preview-from-chip">FROM · —</span>
+        </div>
+        <h1 class="h-title">이전 그림을 판독하세요</h1>
+        <p class="h-sub" id="preview-sub">이전 사람이 전송한 이미지입니다. 형태를 충분히 분석한 뒤, 빈 종이에 기억으로 그려주세요.</p>
+      </div>
+      <div class="body-area">
+        <div class="preview-body">
+          <div class="preview-canvas-frame">
+            <div class="preview-canvas-inner">
+              <canvas id="previewCanvas"></canvas>
+            </div>
+          </div>
+          <div class="preview-actions">
+            <div class="preview-hint">
+              <span class="chip">TIP</span>
+              <span>충분히 본 뒤 진행하세요. 다음 화면은 빈 종이입니다.</span>
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="goToDrawing()">기억하고 그리러 가기 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. DRAWING -->
+    <div class="screen draw-screen" id="screen-draw">
+      <div class="draw-bar">
+        <div class="left">
+          <span class="chip solid" id="draw-role">DRAW</span>
+          <span class="chip" id="draw-name">—</span>
+          <span class="chip accent" id="draw-word" style="display:none">WORD · —</span>
+        </div>
+        <div class="timer-wrap">
+          <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+          <span class="timer-num mono" id="timerNum">50s</span>
+        </div>
+        <button class="btn btn-primary" onclick="submitDrawing()">완성 →</button>
+      </div>
+      <div class="canvas-host" id="canvasHost">
+        <canvas id="drawCanvas"></canvas>
+      </div>
+      <div class="draw-tools">
+        <div class="group" id="colorGroup">
+          <div class="swatch active" data-color="#000000" style="background:#000" onclick="setColor(this)"></div>
+          <div class="swatch" data-color="#EF4444" style="background:#EF4444" onclick="setColor(this)"></div>
+          <div class="swatch" data-color="#3B82F6" style="background:#3B82F6" onclick="setColor(this)"></div>
+          <div class="swatch" data-color="#22C55E" style="background:#22C55E" onclick="setColor(this)"></div>
+          <div class="swatch" data-color="#EAB308" style="background:#EAB308" onclick="setColor(this)"></div>
+          <div class="swatch eraser" onclick="setEraser(this)">⌫</div>
+        </div>
+        <div class="group" id="sizeGroup">
+          <div class="brush-size" data-size="3" onclick="setSize(this)"><div class="dot" style="width:4px;height:4px"></div></div>
+          <div class="brush-size active" data-size="6" onclick="setSize(this)"><div class="dot" style="width:8px;height:8px"></div></div>
+          <div class="brush-size" data-size="12" onclick="setSize(this)"><div class="dot" style="width:14px;height:14px"></div></div>
+          <div class="brush-size" data-size="20" onclick="setSize(this)"><div class="dot" style="width:20px;height:20px"></div></div>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="clearCanvas()">지우기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. MATH GATE -->
+    <div class="screen" id="screen-math">
+      <div class="header-slot compact">
+        <div class="eyebrow-row">
+          <span class="eyebrow" id="math-eyebrow">CHAPTER NN — MATH GATE</span>
+          <span class="chip danger">AI HACK SHIELD</span>
+        </div>
+        <h1 class="h-title small">AI 해킹 방지 관문</h1>
+        <p class="h-sub">정답을 맞출수록 다음 사람에게 또렷한 그림이 전달됩니다. 틀릴수록 노이즈가 심해집니다.</p>
+      </div>
+      <div class="body-area">
+        <div class="math-body">
+          <div class="math-main">
+            <div class="math-meta">
+              <span class="chip mono" id="math-type">정수의 연산</span>
+              <span class="chip mono"><span id="math-idx">1</span> / 5</span>
+            </div>
+            <div class="math-question-area">
+              <div class="math-question" id="math-question">(−5) + (+3)</div>
+            </div>
+            <div class="math-progress"><div class="math-progress-fill" id="math-progress-fill" style="width:20%"></div></div>
+            <div class="math-options" id="math-options"></div>
+          </div>
+          <div class="math-side">
+            <div class="live-card">
+              <span class="label">LIVE PREVIEW</span>
+              <div class="live-canvas-wrap"><canvas id="livePreview"></canvas></div>
+              <div class="live-stats">
+                <div class="stat-mini">
+                  <span class="v" id="live-score">0/5</span>
+                  <span class="l">SCORE</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="v" id="live-quality">20%</span>
+                  <span class="l">QUALITY</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. AI PROCESSING -->
+    <div class="screen" id="screen-ai">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow" id="ai-eyebrow">CHAPTER NN — AI TRANSMISSION</span>
+          <span class="chip" id="ai-verdict">PROCESSING</span>
+        </div>
+        <h1 class="h-title">전송 결과를 확인하세요</h1>
+        <p class="h-sub" id="ai-sub">정답률에 따라 다음 사람에게 전달될 그림이 변조됩니다.</p>
+      </div>
+      <div class="body-area">
+        <div class="ai-body">
+          <div class="ai-card">
+            <div class="ai-preview-wrap"><canvas id="aiPreview"></canvas></div>
+            <div class="ai-stats-row">
+              <div class="ai-stat">
+                <span class="v" id="ai-score">0</span>
+                <span class="l">MATH SCORE</span>
+              </div>
+              <div class="ai-divider"></div>
+              <div class="ai-stat">
+                <span class="v" id="ai-quality">20%</span>
+                <span class="l">QUALITY</span>
+              </div>
+              <div class="ai-divider"></div>
+              <div class="ai-stat">
+                <span class="v mono" style="font-size:18px" id="ai-grade">POOR</span>
+                <span class="l">GRADE</span>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="afterProcessing()">다음 사람에게 전송 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. FINAL GUESS -->
+    <div class="screen" id="screen-guess">
+      <div class="header-slot compact">
+        <div class="eyebrow-row">
+          <span class="eyebrow">CHAPTER 03 — FINAL GUESS</span>
+          <span class="chip accent" id="guess-name-chip">PLAYER · —</span>
+        </div>
+        <h1 class="h-title small">최초의 단어를 추리하세요</h1>
+        <p class="h-sub">여러 번의 왜곡을 거친 마지막 그림입니다. 원래의 비밀 단어가 무엇이었을지 입력하세요.</p>
+      </div>
+      <div class="body-area">
+        <div class="guess-body">
+          <div class="guess-canvas-frame">
+            <div class="guess-canvas-inner"><canvas id="guessCanvas"></canvas></div>
+          </div>
+          <div class="guess-input-row">
+            <input type="text" class="guess-input" id="guessInput" placeholder="추리한 단어를 입력하세요"/>
+            <button class="btn btn-primary btn-lg" onclick="submitGuess()">제출 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. RESULT -->
+    <div class="screen" id="screen-result">
+      <div class="header-slot compact">
+        <div class="eyebrow-row">
+          <span class="eyebrow">CHAPTER 99 — RESULT</span>
+          <span class="chip" id="result-verdict">—</span>
+        </div>
+        <h1 class="h-title small" id="result-title">게임 종료</h1>
+        <p class="h-sub">최초 단어와 최종 답변을 비교하고, 그림의 전송 과정을 타임라인으로 확인하세요.</p>
+      </div>
+      <div class="body-area">
+        <div class="result-body">
+          <div class="result-summary">
+            <div class="col">
+              <span class="lbl">SECRET WORD</span>
+              <span class="val text-accent" id="result-secret">—</span>
+            </div>
+            <div class="col">
+              <span class="lbl">FINAL GUESS</span>
+              <span class="val" id="result-guess">—</span>
+            </div>
+          </div>
+          <div class="timeline" id="timeline"></div>
+          <div class="result-actions">
+            <button class="btn btn-primary btn-lg" onclick="resetGame()">새 게임 시작 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-back" id="modal">
+  <div class="modal">
+    <h4 id="modal-title">알림</h4>
+    <p id="modal-desc">메시지</p>
+    <button class="btn btn-primary" onclick="closeModal()">확인</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ---------------- Audio ---------------- */
+var soundEnabled = true;
+var audioCtx = null;
+function getAudio(){
+  if(!audioCtx){
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }catch(e){ audioCtx = null; }
+  }
+  if(audioCtx && audioCtx.state === 'suspended'){
+    try{ audioCtx.resume(); }catch(e){}
+  }
+  return audioCtx;
+}
+function playSound(type){
+  if(!soundEnabled) return;
+  var ctx = getAudio();
+  if(!ctx) return;
+  try{
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    var t = ctx.currentTime;
+    if(type==='click'){
+      osc.frequency.setValueAtTime(440,t);
+      gain.gain.setValueAtTime(0.06,t);
+      gain.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+      osc.start(t); osc.stop(t+0.08);
+    }else if(type==='correct'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(523.25,t);
+      osc.frequency.setValueAtTime(659.25,t+0.1);
+      gain.gain.setValueAtTime(0.08,t);
+      gain.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+      osc.start(t); osc.stop(t+0.3);
+    }else if(type==='wrong'){
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(150,t);
+      osc.frequency.setValueAtTime(110,t+0.15);
+      gain.gain.setValueAtTime(0.1,t);
+      gain.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+      osc.start(t); osc.stop(t+0.4);
+    }else if(type==='success'){
+      var notes=[261.63,329.63,392.00,523.25];
+      for(var i=0;i<notes.length;i++){
+        (function(freq,idx){
+          var o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          var st=ctx.currentTime + idx*0.1;
+          o.frequency.setValueAtTime(freq,st);
+          g.gain.setValueAtTime(0.08,st);
+          g.gain.exponentialRampToValueAtTime(0.001,st+0.3);
+          o.start(st); o.stop(st+0.3);
+        })(notes[i],i);
+      }
+    }
+  }catch(e){}
+}
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  var b = document.getElementById('soundBtn');
+  b.textContent = soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+}
+
+/* ---------------- Modal ---------------- */
+function showModal(title, desc){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-desc').innerHTML = desc;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('show');
+  playSound('click');
+}
+
+/* ---------------- Word pool (≈210) ---------------- */
+var wordPool = [
+  // 동물
+  '호랑이','사자','코끼리','기린','얼룩말','캥거루','코알라','판다','다람쥐','너구리',
+  '독수리','부엉이','펭귄','플라밍고','앵무새','까마귀','두루미','오리','거위','공작',
+  '카멜레온','악어','뱀','거북이','개구리','문어','해파리','상어','돌고래','사슴벌레',
+  // 음식
+  '피자','햄버거','치킨','떡볶이','김밥','라면','초밥','짜장면','우동','파스타',
+  '아이스크림','마카롱','케이크','도넛','쿠키','와플','빵','달걀','삼겹살','샐러드',
+  '사과','바나나','수박','포도','딸기','파인애플','아보카도','옥수수','당근','빙수',
+  // 사물
+  '스마트폰','노트북','드론','선풍기','텔레비전','냉장고','세탁기','전자레인지','청소기','다리미',
+  '카메라','시계','우산','가방','지갑','안경','선글라스','모자','신발','양말',
+  '책','연필','지우개','가위','자','풀','나침반','현미경','망원경','돋보기',
+  // 탈것
+  '자전거','오토바이','자동차','버스','트럭','기차','지하철','비행기','헬리콥터','로켓',
+  '우주선','배','요트','잠수함','열기구','케이블카','스케이트보드','킥보드','롤러스케이트','마차',
+  // 자연·장소
+  '산','바다','강','폭포','호수','사막','정글','동굴','화산','빙하',
+  '오로라','무지개','번개','회오리','에펠탑','피라미드','만리장성','피사의탑','자유의여신상','콜로세움',
+  // 스포츠·취미
+  '축구','야구','농구','테니스','배드민턴','수영','스키','스케이트','등산','낚시',
+  '번지점프','서핑','요가','체스','보드게임','퍼즐','블록','훌라후프','요요','연날리기',
+  // 직업·캐릭터
+  '경찰','소방관','의사','간호사','요리사','선생님','과학자','우주인','마법사','닌자',
+  '해적','기사','광대','산타','마술사','발레리나','가수','화가','농부','우체부',
+  // 악기
+  '피아노','기타','드럼','바이올린','첼로','플루트','트럼펫','하모니카','아코디언','장구',
+  // 도구
+  '망치','드라이버','톱','삽','갈퀴','집게','핀셋','주사기','청진기','체온계',
+  // 옷·패션
+  '드레스','정장','코트','후드티','청바지','반바지','수영복','잠옷','넥타이','왕관',
+  // 동작·감정
+  '박수','웃음','울음','달리기','점프','춤','노래','속삭임','재채기','잠'
+];
+
+/* ---------------- Game state ---------------- */
+var players = ['플레이어 1','플레이어 2','플레이어 3'];
+var currentIdx = 0;
+var secretWord = '';
+var roundHistory = [];
+var drawingTimer = null;
+var timeLeft = 50;
+
+var brushColor = '#000000';
+var brushWidth = 6;
+var drawCanvas = null, drawCtx = null;
+var isDrawing = false, lastX = 0, lastY = 0;
+
+var mathQuestions = [], mathIdx = 0, correctCount = 0;
+
+/* ---------------- Screen switching ---------------- */
+function switchScreen(id){
+  var screens = document.querySelectorAll('.screen');
+  for(var i=0;i<screens.length;i++) screens[i].classList.remove('active');
+  var el = document.getElementById(id);
+  if(el) el.classList.add('active');
+}
+
+/* ---------------- Setup / lobby ---------------- */
+function renderPlayerList(){
+  var list = document.getElementById('playerList');
+  list.innerHTML = '';
+  for(var i=0;i<players.length;i++){
+    var row = document.createElement('div');
+    row.className = 'player-row';
+    var canRemove = players.length > 3;
+    row.innerHTML =
+      '<span class="num">'+ String(i+1).padStart(2,'0') +'</span>'+
+      '<input type="text" value="'+ escapeHtml(players[i]) +'" placeholder="플레이어 이름" oninput="updatePlayerName('+i+', this.value)" />'+
+      (canRemove ? '<button class="remove" onclick="removePlayer('+i+')" aria-label="삭제">×</button>' : '');
+    list.appendChild(row);
+  }
+  document.getElementById('setup-player-count').textContent = 'PLAYERS · ' + players.length;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(m){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+  });
+}
+function updatePlayerName(i, v){ players[i] = v; }
+function addPlayerInput(){
+  if(players.length >= 12){ showModal('인원 한도','최대 12명까지 추가할 수 있습니다.'); return; }
+  players.push('플레이어 ' + (players.length+1));
+  renderPlayerList();
+  playSound('click');
+}
+function removePlayer(i){
+  if(players.length <= 3) return;
+  players.splice(i,1);
+  renderPlayerList();
+  playSound('click');
+}
+
+/* ---------------- Game flow ---------------- */
+function startGame(){
+  // sync from inputs
+  var inputs = document.querySelectorAll('#playerList input');
+  var fresh = [];
+  for(var i=0;i<inputs.length;i++){
+    var n = inputs[i].value.trim();
+    if(n) fresh.push(n);
+  }
+  if(fresh.length < 3){ showModal('플레이어 부족','<strong>최소 3명</strong>이 필요합니다.'); return; }
+  players = fresh;
+  roundHistory = [];
+  currentIdx = 0;
+  secretWord = wordPool[Math.floor(Math.random() * wordPool.length)];
+  playSound('success');
+  nextTurn();
+}
+
+function nextTurn(){
+  if(currentIdx === players.length - 1){
+    startFinalGuess();
+  }else{
+    document.getElementById('transition-name').textContent = players[currentIdx];
+    document.getElementById('transition-eyebrow').textContent = 'CHAPTER 0' + (currentIdx===0?'1':'2') + ' — HANDOFF';
+    switchScreen('screen-transition');
+  }
+}
+
+function confirmTransition(){
+  playSound('click');
+  if(currentIdx === 0){
+    document.getElementById('word-player-chip').textContent = 'PLAYER · ' + players[0];
+    document.getElementById('word-display').textContent = '[ 가려져 있음 ]';
+    document.getElementById('word-display').classList.add('hidden-state');
+    document.getElementById('word-reveal-btn').style.display = '';
+    document.getElementById('word-start-btn').style.display = 'none';
+    switchScreen('screen-word');
+  }else{
+    showPreviousDrawing();
+  }
+}
+
+function revealWord(){
+  var d = document.getElementById('word-display');
+  d.textContent = secretWord;
+  d.classList.remove('hidden-state');
+  document.getElementById('word-reveal-btn').style.display = 'none';
+  document.getElementById('word-start-btn').style.display = '';
+  playSound('correct');
+}
+
+function showPreviousDrawing(){
+  var prevRound = roundHistory[currentIdx - 1];
+  document.getElementById('preview-eyebrow').textContent = 'CHAPTER 02 — ANALYSIS';
+  document.getElementById('preview-from-chip').textContent = 'FROM · ' + prevRound.playerName;
+  switchScreen('screen-preview');
+  // Render after layout settles
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      var canvas = document.getElementById('previewCanvas');
+      var inner = canvas.parentElement;
+      var rect = inner.getBoundingClientRect();
+      canvas.width = Math.max(2, Math.floor(rect.width));
+      canvas.height = Math.max(2, Math.floor(rect.height));
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      var img = new Image();
+      img.onload = function(){
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.onerror = function(){
+        ctx.fillStyle = '#999';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('이미지 로드 실패', canvas.width/2, canvas.height/2);
+      };
+      img.src = prevRound.distortedImgData;
+    });
+  });
+}
+
+/* ---------------- Drawing ---------------- */
+function goToDrawing(){
+  playSound('click');
+  switchScreen('screen-draw');
+
+  var isFirst = (currentIdx === 0);
+  document.getElementById('draw-role').textContent = isFirst ? 'DRAW' : 'REDRAW';
+  document.getElementById('draw-name').textContent = players[currentIdx];
+  var wordChip = document.getElementById('draw-word');
+  if(isFirst){
+    wordChip.style.display = '';
+    wordChip.textContent = 'WORD · ' + secretWord;
+  }else{
+    wordChip.style.display = 'none';
+  }
+
+  requestAnimationFrame(function(){
+    requestAnimationFrame(initDrawCanvas);
+  });
+}
+
+function initDrawCanvas(){
+  drawCanvas = document.getElementById('drawCanvas');
+  drawCtx = drawCanvas.getContext('2d');
+  var host = document.getElementById('canvasHost');
+  var rect = host.getBoundingClientRect();
+  drawCanvas.width = Math.max(2, Math.floor(rect.width));
+  drawCanvas.height = Math.max(2, Math.floor(rect.height));
+  // Blank paper — always
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0,0,drawCanvas.width,drawCanvas.height);
+  drawCtx.strokeStyle = brushColor;
+  drawCtx.lineWidth = brushWidth;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+
+  // Bind events (remove old by reassign — since canvas may be reused)
+  drawCanvas.onmousedown = startDraw;
+  drawCanvas.onmousemove = doDraw;
+  drawCanvas.onmouseup = stopDraw;
+  drawCanvas.onmouseleave = stopDraw;
+  drawCanvas.ontouchstart = function(e){
+    if(e.touches.length===1){
+      e.preventDefault();
+      var r = drawCanvas.getBoundingClientRect();
+      isDrawing = true;
+      lastX = e.touches[0].clientX - r.left;
+      lastY = e.touches[0].clientY - r.top;
+    }
+  };
+  drawCanvas.ontouchmove = function(e){
+    if(!isDrawing || e.touches.length!==1) return;
+    e.preventDefault();
+    var r = drawCanvas.getBoundingClientRect();
+    var x = e.touches[0].clientX - r.left;
+    var y = e.touches[0].clientY - r.top;
+    drawCtx.beginPath();
+    drawCtx.moveTo(lastX,lastY);
+    drawCtx.lineTo(x,y);
+    drawCtx.stroke();
+    lastX = x; lastY = y;
+  };
+  drawCanvas.ontouchend = function(e){ e.preventDefault(); isDrawing = false; };
+
+  startTimer();
+}
+
+function startDraw(e){
+  var r = drawCanvas.getBoundingClientRect();
+  isDrawing = true;
+  lastX = e.clientX - r.left;
+  lastY = e.clientY - r.top;
+}
+function doDraw(e){
+  if(!isDrawing) return;
+  var r = drawCanvas.getBoundingClientRect();
+  var x = e.clientX - r.left;
+  var y = e.clientY - r.top;
+  drawCtx.beginPath();
+  drawCtx.moveTo(lastX,lastY);
+  drawCtx.lineTo(x,y);
+  drawCtx.stroke();
+  lastX = x; lastY = y;
+}
+function stopDraw(){ isDrawing = false; }
+
+function setColor(el){
+  brushColor = el.getAttribute('data-color');
+  if(drawCtx) drawCtx.strokeStyle = brushColor;
+  var swatches = document.querySelectorAll('#colorGroup .swatch');
+  for(var i=0;i<swatches.length;i++) swatches[i].classList.remove('active');
+  el.classList.add('active');
+  playSound('click');
+}
+function setEraser(el){
+  brushColor = '#ffffff';
+  if(drawCtx) drawCtx.strokeStyle = brushColor;
+  var swatches = document.querySelectorAll('#colorGroup .swatch');
+  for(var i=0;i<swatches.length;i++) swatches[i].classList.remove('active');
+  el.classList.add('active');
+  playSound('click');
+}
+function setSize(el){
+  brushWidth = parseInt(el.getAttribute('data-size'),10) || 6;
+  if(drawCtx) drawCtx.lineWidth = brushWidth;
+  var btns = document.querySelectorAll('#sizeGroup .brush-size');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('active');
+  el.classList.add('active');
+  playSound('click');
+}
+function clearCanvas(){
+  if(!drawCtx || !drawCanvas) return;
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0,0,drawCanvas.width,drawCanvas.height);
+  drawCtx.strokeStyle = brushColor;
+  playSound('click');
+}
+
+function startTimer(){
+  clearInterval(drawingTimer);
+  timeLeft = 50;
+  updateTimerUI();
+  drawingTimer = setInterval(function(){
+    timeLeft--;
+    updateTimerUI();
+    if(timeLeft <= 0){
+      clearInterval(drawingTimer);
+      submitDrawing();
+    }
+  },1000);
+}
+function updateTimerUI(){
+  var fill = document.getElementById('timerFill');
+  var num = document.getElementById('timerNum');
+  if(!fill || !num) return;
+  var pct = Math.max(0, (timeLeft/50)*100);
+  fill.style.width = pct + '%';
+  num.textContent = timeLeft + 's';
+  fill.classList.remove('warn','danger');
+  num.classList.remove('warn','danger');
+  if(timeLeft <= 5){
+    fill.classList.add('danger');
+    num.classList.add('danger');
+  }else if(timeLeft <= 15){
+    fill.classList.add('warn');
+    num.classList.add('warn');
+  }
+}
+
+function submitDrawing(){
+  clearInterval(drawingTimer);
+  if(!drawCanvas){ return; }
+  var data = drawCanvas.toDataURL('image/png');
+  roundHistory.push({
+    playerIdx: currentIdx,
+    playerName: players[currentIdx],
+    originalImgData: data,
+    distortedImgData: data,
+    mathScore: 0
+  });
+  playSound('click');
+  startMath();
+}
+
+/* ---------------- Math ---------------- */
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){var t=b; b=a%b; a=t;} return a||1; }
+function lcm(a,b){ return Math.abs(a*b)/gcd(a,b); }
+function randInt(min,max,exclude){
+  exclude = exclude || [];
+  var v;
+  var tries = 0;
+  do{
+    v = Math.floor(Math.random()*(max-min+1)) + min;
+    tries++;
+  }while(exclude.indexOf(v) !== -1 && tries < 50);
+  return v;
+}
+function fmtNum(n){ return n<0 ? String(n) : '+'+n; }
+
+function generateMathQuestions(){
+  var templates = [
+    function(){
+      var a = randInt(-15,15,[0]), b = randInt(-15,15,[0]);
+      var plus = Math.random() > 0.5;
+      var q = plus ? '('+fmtNum(a)+') + ('+fmtNum(b)+')' : '('+fmtNum(a)+') − ('+fmtNum(b)+')';
+      var ans = plus ? (a+b) : (a-b);
+      return { question:q, answer:String(ans), type:'정수의 덧셈·뺄셈' };
+    },
+    function(){
+      if(Math.random()>0.5){
+        var a = randInt(-9,9,[0,1,-1]), b = randInt(-9,9,[0,1,-1]);
+        return { question:'('+fmtNum(a)+') × ('+fmtNum(b)+')', answer:String(a*b), type:'정수의 곱셈' };
+      }else{
+        var bb = randInt(-9,9,[0,1,-1]);
+        var ans = randInt(-9,9,[0]);
+        var aa = bb*ans;
+        return { question:'('+fmtNum(aa)+') ÷ ('+fmtNum(bb)+')', answer:String(ans), type:'정수의 나눗셈' };
+      }
+    },
+    function(){
+      var isMax = Math.random()>0.5;
+      var candidates = [
+        {t:'−7',v:-7},{t:'|−9|',v:9},{t:'5',v:5},{t:'−1.5',v:-1.5},
+        {t:'|3.5|',v:3.5},{t:'0',v:0},{t:'|−5|',v:5},{t:'−4',v:-4},{t:'|2|',v:2}
+      ];
+      var shuffled = candidates.sort(function(){return 0.5-Math.random()}).slice(0,4);
+      var target = shuffled[0];
+      for(var i=1;i<shuffled.length;i++){
+        if(isMax ? shuffled[i].v > target.v : shuffled[i].v < target.v) target = shuffled[i];
+      }
+      return {
+        question:'절댓값이 가장 '+(isMax?'큰':'작은')+' 수는?',
+        options: shuffled.map(function(c){return c.t}),
+        answer: target.t,
+        type:'절댓값 비교'
+      };
+    },
+    function(){
+      var denoms = [2,3,4,6];
+      var d1 = denoms[Math.floor(Math.random()*denoms.length)];
+      var d2 = d1;
+      while(d2===d1) d2 = denoms[Math.floor(Math.random()*denoms.length)];
+      var n1 = randInt(-3,3,[0]), n2 = randInt(-3,3,[0]);
+      var cd = lcm(d1,d2);
+      var num1 = n1*(cd/d1), num2 = n2*(cd/d2);
+      var fn = num1+num2;
+      var g = gcd(Math.abs(fn)||1, cd);
+      var rn = fn/g, rd = cd/g;
+      var ans = (rd===1) ? String(rn) : (rn+'/'+rd);
+      var sign = n2<0 ? '−' : '+';
+      var q = '('+n1+'/'+d1+') '+sign+' ('+Math.abs(n2)+'/'+d2+')';
+      return { question:q, answer:ans, type:'유리수 연산' };
+    },
+    function(){
+      var base = randInt(-3,3,[0,1,-1]);
+      var exp = Math.random()>0.5 ? 2 : 3;
+      var mult = randInt(-3,3,[0]);
+      var add = randInt(-6,6,[0]);
+      var ans = Math.pow(base,exp)*mult + add;
+      var bs = base<0 ? '('+base+')' : String(base);
+      return {
+        question: bs+'<sup>'+exp+'</sup> × ('+fmtNum(mult)+') + ('+fmtNum(add)+')',
+        answer: String(ans),
+        type:'거듭제곱 혼합 계산'
+      };
+    }
+  ];
+  var out = [];
+  for(var i=0;i<5;i++){
+    var q = templates[i%templates.length]();
+    if(!q.options) q.options = makeOptions(q.answer);
+    out.push(q);
+  }
+  return out;
+}
+function makeOptions(correct){
+  var set = {};
+  set[correct] = true;
+  var isNum = !isNaN(Number(correct)) && correct.indexOf('/') === -1;
+  var tries = 0;
+  while(Object.keys(set).length < 4 && tries < 100){
+    tries++;
+    if(isNum){
+      var off = randInt(-5,5,[0]);
+      set[String(Number(correct)+off)] = true;
+      if(correct !== '0' && Math.random()>0.6) set[String(-Number(correct))] = true;
+    }else if(correct.indexOf('/') !== -1){
+      var parts = correct.split('/');
+      var n = parseInt(parts[0],10), d = parseInt(parts[1],10);
+      set[(n+randInt(-2,2,[0]))+'/'+d] = true;
+      set[(-n)+'/'+d] = true;
+      set[n+'/'+(d+1)] = true;
+    }else{
+      set[correct+String(randInt(1,4))] = true;
+    }
+  }
+  return Object.keys(set).sort(function(){return 0.5-Math.random()});
+}
+
+function startMath(){
+  mathQuestions = generateMathQuestions();
+  mathIdx = 0;
+  correctCount = 0;
+  document.getElementById('math-eyebrow').textContent = 'CHAPTER 0' + (currentIdx===0?'1':'2') + ' — MATH GATE';
+  switchScreen('screen-math');
+  renderMath();
+  updateLivePreview();
+}
+function renderMath(){
+  var q = mathQuestions[mathIdx];
+  document.getElementById('math-idx').textContent = (mathIdx+1);
+  document.getElementById('math-type').textContent = q.type;
+  document.getElementById('math-question').innerHTML = q.question;
+  document.getElementById('math-progress-fill').style.width = (((mathIdx)/5)*100) + '%';
+  document.getElementById('live-score').textContent = correctCount+'/5';
+  var qty = Math.round(((correctCount/5)*80) + 20);
+  document.getElementById('live-quality').textContent = qty+'%';
+  var qEl = document.getElementById('live-quality');
+  qEl.classList.remove('success','warn','danger');
+  if(correctCount >= 4) qEl.classList.add('success');
+  else if(correctCount >= 2) qEl.classList.add('warn');
+  else qEl.classList.add('danger');
+
+  var opts = document.getElementById('math-options');
+  opts.innerHTML = '';
+  for(var i=0;i<q.options.length;i++){
+    (function(opt){
+      var btn = document.createElement('button');
+      btn.className = 'math-option';
+      btn.innerHTML = opt;
+      btn.onclick = function(){ submitMathAnswer(opt, btn); };
+      opts.appendChild(btn);
+    })(q.options[i]);
+  }
+}
+function submitMathAnswer(opt, btn){
+  var q = mathQuestions[mathIdx];
+  var correct = (opt === q.answer);
+  if(correct){
+    correctCount++;
+    btn.classList.add('correct');
+    playSound('correct');
+  }else{
+    btn.classList.add('wrong');
+    // also highlight correct option
+    var siblings = btn.parentElement.querySelectorAll('.math-option');
+    for(var i=0;i<siblings.length;i++){
+      if(siblings[i].textContent.trim() === String(q.answer).trim()
+         || siblings[i].innerHTML === q.answer){
+        siblings[i].classList.add('correct');
+      }
+    }
+    playSound('wrong');
+  }
+  // disable all
+  var all = document.querySelectorAll('#math-options .math-option');
+  for(var j=0;j<all.length;j++) all[j].disabled = true;
+  updateLivePreview();
+
+  setTimeout(function(){
+    mathIdx++;
+    if(mathIdx < 5){
+      renderMath();
+    }else{
+      startAIProcessing();
+    }
+  }, 500);
+}
+
+function updateLivePreview(){
+  var preview = document.getElementById('livePreview');
+  if(!preview) return;
+  var wrap = preview.parentElement;
+  var r = wrap.getBoundingClientRect();
+  preview.width = Math.max(2, Math.floor(r.width));
+  preview.height = Math.max(2, Math.floor(r.height));
+  var src = document.createElement('canvas');
+  var round = roundHistory[currentIdx];
+  if(!round) return;
+  var img = new Image();
+  img.onload = function(){
+    src.width = img.width; src.height = img.height;
+    src.getContext('2d').drawImage(img,0,0);
+    applyDistortion(src, preview, correctCount);
+  };
+  img.src = round.originalImgData;
+}
+
+/* ---------------- Distortion ---------------- */
+function applyDistortion(srcCanvas, targetCanvas, score){
+  var ctx = targetCanvas.getContext('2d');
+  // scale to target
+  var sw = srcCanvas.width, sh = srcCanvas.height;
+  if(score === 5){
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,targetCanvas.width,targetCanvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(srcCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+    return;
+  }
+  var scale, blur, noise;
+  switch(score){
+    case 4: scale=0.58; blur=0.9; noise=0.025; break;
+    case 3: scale=0.38; blur=2.0; noise=0.055; break;
+    case 2: scale=0.25; blur=3.6; noise=0.095; break;
+    case 1: scale=0.15; blur=5.8; noise=0.16; break;
+    default: scale=0.075; blur=8.0; noise=0.28; break;
+  }
+  var tw = Math.max(2, Math.floor(targetCanvas.width * scale));
+  var th = Math.max(2, Math.floor(targetCanvas.height * scale));
+  var tmp = document.createElement('canvas');
+  tmp.width = tw; tmp.height = th;
+  var tctx = tmp.getContext('2d');
+  tctx.imageSmoothingEnabled = true;
+  tctx.drawImage(srcCanvas, 0,0, tw, th);
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,targetCanvas.width,targetCanvas.height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tmp, 0,0, targetCanvas.width, targetCanvas.height);
+
+  // noise
+  try{
+    var data = ctx.getImageData(0,0,targetCanvas.width,targetCanvas.height);
+    var px = data.data;
+    for(var i=0;i<px.length;i+=4){
+      if(Math.random() < noise){
+        var v = Math.random()>0.5 ? 240 : 15;
+        px[i]=v; px[i+1]=v; px[i+2]=v;
+      }
+    }
+    ctx.putImageData(data,0,0);
+  }catch(e){}
+
+  if(blur > 0){
+    try{
+      var copy = document.createElement('canvas');
+      copy.width = targetCanvas.width;
+      copy.height = targetCanvas.height;
+      copy.getContext('2d').drawImage(targetCanvas,0,0);
+      ctx.save();
+      ctx.filter = 'blur(' + blur + 'px)';
+      ctx.drawImage(copy, 0, 0);
+      ctx.restore();
+    }catch(e){}
+  }
+}
+
+/* ---------------- AI processing ---------------- */
+function startAIProcessing(){
+  var round = roundHistory[currentIdx];
+  round.mathScore = correctCount;
+
+  document.getElementById('ai-eyebrow').textContent = 'CHAPTER 0' + (currentIdx===0?'1':'2') + ' — AI TRANSMISSION';
+  document.getElementById('ai-score').textContent = correctCount;
+  var pct = Math.round(((correctCount/5)*80) + 20);
+  document.getElementById('ai-quality').textContent = pct + '%';
+  var grades = ['CRITICAL','POOR','LOW','OK','GOOD','PERFECT'];
+  document.getElementById('ai-grade').textContent = grades[correctCount];
+  var verdict = document.getElementById('ai-verdict');
+  verdict.classList.remove('success','warn','danger');
+  if(correctCount >= 4){ verdict.classList.add('success'); verdict.textContent = 'CLEAN'; }
+  else if(correctCount >= 2){ verdict.classList.add('warn'); verdict.textContent = 'NOISY'; }
+  else{ verdict.classList.add('danger'); verdict.textContent = 'HACKED'; }
+
+  var scoreEl = document.getElementById('ai-score');
+  scoreEl.classList.remove('success','warn','danger');
+  if(correctCount >= 4) scoreEl.classList.add('success');
+  else if(correctCount >= 2) scoreEl.classList.add('warn');
+  else scoreEl.classList.add('danger');
+
+  switchScreen('screen-ai');
+
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      var preview = document.getElementById('aiPreview');
+      var wrap = preview.parentElement;
+      var r = wrap.getBoundingClientRect();
+      preview.width = Math.max(2, Math.floor(r.width));
+      preview.height = Math.max(2, Math.floor(r.height));
+      var src = document.createElement('canvas');
+      var img = new Image();
+      img.onload = function(){
+        src.width = img.width; src.height = img.height;
+        src.getContext('2d').drawImage(img,0,0);
+        applyDistortion(src, preview, correctCount);
+        // store distorted
+        round.distortedImgData = preview.toDataURL('image/png');
+      };
+      img.src = round.originalImgData;
+    });
+  });
+}
+
+function afterProcessing(){
+  playSound('click');
+  currentIdx++;
+  nextTurn();
+}
+
+/* ---------------- Final guess ---------------- */
+function startFinalGuess(){
+  var finalPlayer = players[players.length - 1];
+  document.getElementById('guess-name-chip').textContent = 'PLAYER · ' + finalPlayer;
+  document.getElementById('guessInput').value = '';
+  switchScreen('screen-guess');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      var canvas = document.getElementById('guessCanvas');
+      var wrap = canvas.parentElement;
+      var r = wrap.getBoundingClientRect();
+      canvas.width = Math.max(2, Math.floor(r.width));
+      canvas.height = Math.max(2, Math.floor(r.height));
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      var last = roundHistory[roundHistory.length-1];
+      var img = new Image();
+      img.onload = function(){
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      };
+      img.src = last.distortedImgData;
+    });
+  });
+}
+
+function submitGuess(){
+  var guess = document.getElementById('guessInput').value.trim();
+  if(!guess){ showModal('미입력','단어를 입력하세요.'); return; }
+  var match = guess.replace(/\s+/g,'') === secretWord.replace(/\s+/g,'');
+  var v = document.getElementById('result-verdict');
+  var t = document.getElementById('result-title');
+  v.classList.remove('success','danger','warn');
+  if(match){
+    v.classList.add('success');
+    v.textContent = 'SUCCESS';
+    t.textContent = '추리 성공';
+    t.classList.add('text-success');
+    t.classList.remove('text-danger');
+    playSound('success');
+  }else{
+    v.classList.add('danger');
+    v.textContent = 'FAILED';
+    t.textContent = '추리 실패';
+    t.classList.add('text-danger');
+    t.classList.remove('text-success');
+    playSound('wrong');
+  }
+  document.getElementById('result-secret').textContent = secretWord;
+  document.getElementById('result-guess').textContent = guess;
+  renderTimeline();
+  switchScreen('screen-result');
+}
+
+function renderTimeline(){
+  var tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  for(var i=0;i<roundHistory.length;i++){
+    var r = roundHistory[i];
+    var pct = Math.round(((r.mathScore/5)*80) + 20);
+    var verdictClass = r.mathScore >= 4 ? 'success' : (r.mathScore >= 2 ? 'warn' : 'danger');
+    var div = document.createElement('div');
+    div.className = 'timeline-row';
+    div.innerHTML =
+      '<div class="meta">'+
+        '<span class="chip mono" style="align-self:flex-start">'+String(i+1).padStart(2,'0')+'</span>'+
+        '<span class="name">'+ escapeHtml(r.playerName) +'</span>'+
+        '<span class="chip '+ verdictClass +'" style="align-self:flex-start">'+ r.mathScore +'/5 · '+ pct +'%</span>'+
+      '</div>'+
+      '<div class="img-wrap"><img src="'+ r.originalImgData +'" alt="original"/></div>'+
+      '<div class="img-wrap"><img src="'+ r.distortedImgData +'" alt="distorted"/></div>';
+    tl.appendChild(div);
+  }
+}
+
+function resetGame(){
+  clearInterval(drawingTimer);
+  playSound('click');
+  players = ['플레이어 1','플레이어 2','플레이어 3'];
+  roundHistory = [];
+  currentIdx = 0;
+  secretWord = '';
+  renderPlayerList();
+  switchScreen('screen-setup');
+}
+
+/* ---------------- Boot ---------------- */
+window.addEventListener('DOMContentLoaded', function(){
+  renderPlayerList();
+});
+// Resume audio on first user gesture (autoplay policy)
+function _firstGesture(){
+  getAudio();
+  window.removeEventListener('pointerdown', _firstGesture);
+  window.removeEventListener('keydown', _firstGesture);
+}
+window.addEventListener('pointerdown', _firstGesture);
+window.addEventListener('keydown', _firstGesture);
+
+// Expose for inline onclick (defensive — also fine without)
+window.toggleSound = toggleSound;
+window.closeModal = closeModal;
+window.addPlayerInput = addPlayerInput;
+window.removePlayer = removePlayer;
+window.updatePlayerName = updatePlayerName;
+window.startGame = startGame;
+window.confirmTransition = confirmTransition;
+window.revealWord = revealWord;
+window.goToDrawing = goToDrawing;
+window.setColor = setColor;
+window.setEraser = setEraser;
+window.setSize = setSize;
+window.clearCanvas = clearCanvas;
+window.submitDrawing = submitDrawing;
+window.afterProcessing = afterProcessing;
+window.submitGuess = submitGuess;
+window.resetGame = resetGame;
+</script>
+</body>
+</html>
