@@ -1287,11 +1287,11 @@ function applyDistortion(srcCanvas, targetCanvas, score){
   }
   var scale, blur, noise;
   switch(score){
-    case 4: scale=0.58; blur=0.9; noise=0.025; break;
-    case 3: scale=0.38; blur=2.0; noise=0.055; break;
-    case 2: scale=0.25; blur=3.6; noise=0.095; break;
-    case 1: scale=0.15; blur=5.8; noise=0.16; break;
-    default: scale=0.075; blur=8.0; noise=0.28; break;
+    case 4: scale=0.72; blur=0.5; noise=0.012; break;
+    case 3: scale=0.55; blur=1.1; noise=0.028; break;
+    case 2: scale=0.40; blur=2.0; noise=0.050; break;
+    case 1: scale=0.28; blur=3.2; noise=0.085; break;
+    default: scale=0.18; blur=4.8; noise=0.140; break;
   }
   var tw = Math.max(2, Math.floor(targetCanvas.width * scale));
   var th = Math.max(2, Math.floor(targetCanvas.height * scale));
