@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>노이즈 캐치마인드</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -25,7 +25,8 @@
     --grad-coral:linear-gradient(135deg,#FB7185 0%,#F472B6 100%);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  @supports (height:100dvh){html,body{height:100dvh}}
   body{
     font-family:'Inter','Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif;
     font-feature-settings:'cv01','cv05','cv09','cv11','ss03','ss07','dlig';
@@ -33,7 +34,7 @@
     user-select:none;-webkit-user-select:none;
   }
   .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
-  .app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
+  .app{display:grid;grid-template-rows:48px 1fr;height:100vh;height:100dvh;width:100%;max-width:100vw}
   .topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:0 24px;border-bottom:1px solid var(--hairline);
@@ -403,6 +404,166 @@
   .text-danger{color:var(--danger)}
   .text-accent{color:var(--accent)}
   .text-muted{color:var(--ink-muted)}
+
+
+  /* ===========================================================
+     RESPONSIVE PATCH — 모든 기기에서 레이아웃 안정화
+     - 휴대폰(≤600px), 태블릿 세로(≤900px), 좁은 가로(≤1100px)
+     - 동적 뷰포트(dvh) 대응, 가로/세로 모두 대응
+     =========================================================== */
+
+  /* 공통: 캔버스/이미지가 컨테이너를 넘지 못하게 */
+  img,canvas,svg{max-width:100%}
+
+  /* 큰 카드들의 고정 너비 제거 (모든 화면 공통) */
+  .centered .big-card{min-width:0;width:min(560px,100%);padding:32px 28px}
+  .ai-card{min-width:0;width:min(640px,100%)}
+  .ai-preview-wrap{width:min(380px,100%)}
+
+  /* ---------- 태블릿 세로 / 작은 노트북 (≤1100px) ---------- */
+  @media (max-width: 1100px){
+    .screen{padding:20px 22px}
+    .h-title{font-size:40px;letter-spacing:-2px}
+    .h-title.small{font-size:28px;letter-spacing:-1.4px}
+    .h-sub{font-size:16px}
+    .math-question{font-size:64px}
+    .word-display{font-size:60px;letter-spacing:-3px}
+    .math-body{grid-template-columns:1fr 200px;gap:18px}
+  }
+
+  /* ---------- 태블릿 세로 (≤900px) : math 2열 → 1열 ---------- */
+  @media (max-width: 900px){
+    .topbar{padding:0 16px;font-size:11px}
+    .topbar .meta{gap:10px}
+    .screen{padding:16px 18px}
+    .header-slot{padding-bottom:12px;margin-bottom:14px}
+    .header-slot.compact{padding-bottom:6px;margin-bottom:10px}
+    .h-title{font-size:32px;letter-spacing:-1.4px}
+    .h-title.small{font-size:24px;letter-spacing:-1px}
+    .h-sub{font-size:14px;max-width:none}
+    .topic-card .topic-name{font-size:18px}
+    .topic-card{padding:18px 18px 16px}
+    .math-body{grid-template-columns:1fr;grid-template-rows:1fr auto;gap:12px}
+    .math-side{flex-direction:row;gap:10px}
+    .math-side .live-card{flex:1}
+    .math-question{font-size:48px;letter-spacing:-1.8px}
+    .math-options{gap:8px}
+    .math-option{font-size:18px;padding:14px 12px}
+    .word-display{font-size:48px;letter-spacing:-2.4px}
+    .timeline-row{grid-template-columns:120px 1fr 1fr;gap:10px;padding:10px}
+    .result-summary{padding:14px 16px}
+    .result-summary .col .val{font-size:20px}
+    .draw-tools .swatch,.draw-tools .brush-size{width:28px;height:28px}
+    .preview-canvas-inner,.guess-canvas-inner{aspect-ratio:auto;height:100%;width:100%}
+  }
+
+  /* ---------- 휴대폰 (≤600px) ---------- */
+  @media (max-width: 600px){
+    .app{grid-template-rows:44px 1fr}
+    .topbar{padding:0 12px;font-size:10.5px}
+    .topbar .meta{gap:8px}
+    .topbar .meta span:first-child{display:none}  /* 부제 텍스트 숨김 */
+    .topbar button.sound{padding:3px 8px;font-size:10px}
+
+    .screen{padding:12px 14px}
+    .header-slot{padding-bottom:10px;margin-bottom:10px}
+    .eyebrow{font-size:10px}
+    .h-title{font-size:26px;letter-spacing:-1.1px;margin-bottom:6px}
+    .h-title.small{font-size:20px;letter-spacing:-0.8px}
+    .h-sub{font-size:13px;line-height:1.4}
+
+    /* 토픽 카드 1열 */
+    .topic-grid{grid-template-columns:1fr;gap:10px}
+    .topic-card{padding:16px}
+    .topic-card .topic-name{font-size:17px}
+    .topic-card .topic-desc{font-size:12px;margin-top:6px}
+    .topic-card .topic-cta{margin-top:12px}
+
+    /* 플레이어 명단 */
+    .player-row{padding:10px 12px;gap:10px}
+    .player-row input{font-size:15px}
+
+    /* 버튼 */
+    .btn{padding:9px 14px;font-size:13px}
+    .btn-lg{padding:12px 18px;font-size:14px}
+    .lobby-actions{flex-direction:column-reverse;gap:8px;align-items:stretch}
+    .lobby-actions .btn{justify-content:center}
+
+    /* 전환 / 빅카드 */
+    .centered{gap:16px}
+    .centered .big-card{padding:24px 18px;border-radius:16px}
+    .word-display{font-size:36px;letter-spacing:-1.6px;padding:4px 0}
+    .word-display.hidden-state{font-size:16px}
+
+    /* 수학 화면 */
+    .math-main{padding:14px;border-radius:14px}
+    .math-question{font-size:36px;letter-spacing:-1.2px}
+    .math-question-area{padding:10px 0}
+    .math-options{grid-template-columns:1fr 1fr;gap:6px}
+    .math-option{font-size:16px;padding:12px 8px;border-radius:10px}
+    .math-side{gap:8px}
+    .live-card{padding:10px;border-radius:12px}
+    .stat-mini .v{font-size:14px}
+
+    /* 그리기 */
+    .draw-screen{padding:10px 12px}
+    .draw-bar{gap:8px;padding:4px 2px 8px}
+    .draw-tools{padding-top:8px;gap:8px;flex-wrap:wrap;justify-content:center}
+    .draw-tools .group{gap:4px}
+    .swatch{width:26px;height:26px}
+    .brush-size{width:26px;height:26px}
+
+    /* AI 처리 */
+    .ai-card{padding:20px 18px;border-radius:16px;gap:12px}
+    .ai-preview-wrap{width:min(280px,100%)}
+    .ai-stats-row{gap:16px;flex-wrap:wrap;justify-content:center}
+    .ai-stat .v{font-size:22px}
+
+    /* 정답 입력 */
+    .guess-input{font-size:16px;padding:10px 14px}
+    .guess-input-row{flex-direction:column;align-items:stretch;gap:8px}
+    .guess-input-row .btn{justify-content:center}
+
+    /* 결과 */
+    .result-summary{grid-template-columns:1fr;padding:12px 14px;gap:8px}
+    .result-summary .col + .col{border-left:none;border-top:1px solid var(--hairline);padding-left:0;padding-top:8px}
+    .result-summary .col .val{font-size:18px}
+    .timeline-row{grid-template-columns:1fr;gap:8px;padding:10px}
+    .timeline-row .img-wrap{max-width:240px}
+
+    /* 모달 */
+    .modal{padding:22px 20px;border-radius:16px}
+    .modal h4{font-size:17px}
+  }
+
+  /* ---------- 매우 좁은 휴대폰 (≤380px) ---------- */
+  @media (max-width: 380px){
+    .h-title{font-size:22px}
+    .math-question{font-size:30px}
+    .math-option{font-size:14px;padding:10px 6px}
+    .word-display{font-size:30px}
+  }
+
+  /* ---------- 가로 모드 휴대폰 (높이 부족) ---------- */
+  @media (max-height: 500px) and (orientation: landscape){
+    .app{grid-template-rows:40px 1fr}
+    .topbar{padding:0 14px}
+    .screen{padding:10px 16px}
+    .header-slot{padding-bottom:8px;margin-bottom:8px}
+    .h-title{font-size:22px;margin-bottom:4px}
+    .h-sub{font-size:12px;line-height:1.3}
+    .topic-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+    .topic-card{padding:12px}
+    .topic-card .topic-name{font-size:15px}
+    .topic-card .topic-desc{display:none}
+    .topic-card .topic-cta{margin-top:6px}
+    .math-body{grid-template-columns:1fr 180px;grid-template-rows:1fr;gap:12px}
+    .math-side{flex-direction:column}
+    .math-question{font-size:36px}
+    .word-display{font-size:32px}
+    .centered .big-card{padding:18px 22px}
+  }
+
 </style>
 </head>
 <body>
