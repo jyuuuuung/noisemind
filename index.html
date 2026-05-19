@@ -98,6 +98,44 @@
   .btn-ghost:hover{color:var(--ink);border-color:rgba(255,255,255,0.2)}
   .btn-lg{padding:14px 22px;font-size:15px}
 
+  
+  /* ===== Topic Lobby ===== */
+  .topic-grid{
+    flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+    min-height:0;padding-right:4px;
+  }
+  .topic-card{
+    position:relative;display:flex;flex-direction:column;justify-content:space-between;
+    padding:22px 22px 20px;border-radius:14px;
+    background:var(--surface-1);border:1px solid var(--hairline);
+    color:var(--ink);text-align:left;cursor:pointer;font-family:inherit;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+    overflow:hidden;
+  }
+  .topic-card:hover{background:var(--surface-2);border-color:rgba(255,255,255,0.18);transform:translateY(-1px)}
+  .topic-card .topic-eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.4px;
+    color:var(--ink-muted);margin-bottom:8px;text-transform:uppercase;
+  }
+  .topic-card .topic-name{font-size:22px;font-weight:500;letter-spacing:-0.6px;line-height:1.15}
+  .topic-card .topic-desc{font-size:12.5px;color:var(--ink-muted);letter-spacing:-0.1px;margin-top:8px;line-height:1.45}
+  .topic-card .topic-cta{
+    margin-top:18px;align-self:flex-start;font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--ink-muted);letter-spacing:0.4px;
+  }
+  .topic-card .topic-accent{
+    position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;
+    opacity:0.18;filter:blur(2px);pointer-events:none;
+  }
+  .topic-card[data-topic="integer"]  .topic-accent{background:var(--grad-violet)}
+  .topic-card[data-topic="linear"]   .topic-accent{background:var(--grad-magenta)}
+  .topic-card[data-topic="equation"] .topic-accent{background:var(--grad-orange)}
+  .topic-card[data-topic="coord"]    .topic-accent{background:var(--grad-coral)}
+  .topic-lobby-foot{
+    display:flex;justify-content:space-between;align-items:center;padding-top:6px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);letter-spacing:0.4px;
+  }
+
   /* Body area */
   .body-area{flex:1;display:flex;flex-direction:column;min-height:0}
 
@@ -248,6 +286,11 @@
     line-height:1;
   }
   .math-question sup{font-size:0.5em;vertical-align:super}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1;margin:0 .12em;font-size:.62em}
+  .frac .num{padding:0 .35em .08em;border-bottom:.08em solid currentColor}
+  .frac .den{padding:.08em .35em 0}
+  .math-option .frac{font-size:.78em}
+
   .math-progress{height:4px;background:var(--surface-2);border-radius:100px;margin:8px 0 16px;overflow:hidden}
   .math-progress-fill{height:100%;background:var(--ink);transition:width .3s ease}
   .math-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -377,8 +420,66 @@
   <!-- Stage -->
   <div class="stage" id="stage">
 
+    <!-- 0. TOPIC LOBBY -->
+    <div class="screen active" id="screen-topic">
+      <div class="header-slot">
+        <div class="eyebrow-row">
+          <span class="eyebrow">CHAPTER 00 — TOPIC SELECT</span>
+          <span class="chip" id="topic-chip">SELECT A DOMAIN</span>
+        </div>
+        <h1 class="h-title">학습 영역 선택</h1>
+        <p class="h-sub">플레이할 수학 영역을 골라주세요. 선택한 영역에 맞는 문제가 MATH GATE에서 출제됩니다.</p>
+      </div>
+      <div class="body-area">
+        <div class="lobby">
+          <div class="topic-grid">
+            <button type="button" class="topic-card" data-topic="integer" onclick="selectTopic('integer')">
+              <div class="topic-accent"></div>
+              <div>
+                <div class="topic-eyebrow">DOMAIN · 01</div>
+                <div class="topic-name">정수와 유리수</div>
+                <div class="topic-desc">절댓값, 사칙연산, 거듭제곱, 혼합 계산까지 두루 다루는 기본 연산 영역.</div>
+              </div>
+              <div class="topic-cta">START →</div>
+            </button>
+            <button type="button" class="topic-card" data-topic="linear" onclick="selectTopic('linear')">
+              <div class="topic-accent"></div>
+              <div>
+                <div class="topic-eyebrow">DOMAIN · 02</div>
+                <div class="topic-name">일차식의 계산</div>
+                <div class="topic-desc">동류항 정리, 분배법칙, 일차식의 덧셈·뺄셈·나눗셈 중심.</div>
+              </div>
+              <div class="topic-cta">START →</div>
+            </button>
+            <button type="button" class="topic-card" data-topic="equation" onclick="selectTopic('equation')">
+              <div class="topic-accent"></div>
+              <div>
+                <div class="topic-eyebrow">DOMAIN · 03</div>
+                <div class="topic-name">일차방정식의 계산</div>
+                <div class="topic-desc">이항·등식의 성질·괄호 풀기를 활용해 일차방정식을 푸는 영역.</div>
+              </div>
+              <div class="topic-cta">START →</div>
+            </button>
+            <button type="button" class="topic-card" data-topic="coord" onclick="selectTopic('coord')">
+              <div class="topic-accent"></div>
+              <div>
+                <div class="topic-eyebrow">DOMAIN · 04</div>
+                <div class="topic-name">좌표평면과 그래프</div>
+                <div class="topic-desc">순서쌍, 사분면, 좌표축 위의 점, 대칭이동을 다루는 영역.</div>
+              </div>
+              <div class="topic-cta">START →</div>
+            </button>
+          </div>
+          <div class="topic-lobby-foot">
+            <span>※ 영역은 게임 시작 후에도 새로 시작하면 다시 선택할 수 있습니다.</span>
+            <span class="mono">NOISE-CATCHMIND · TOPIC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 1. SETUP / LOBBY -->
-    <div class="screen active" id="screen-setup">
+    <div class="screen" id="screen-setup">
       <div class="header-slot">
         <div class="eyebrow-row">
           <span class="eyebrow">CHAPTER 00 — SETUP</span>
@@ -1084,8 +1185,57 @@ function randInt(min,max,exclude){
 }
 function fmtNum(n){ return n<0 ? String(n) : '+'+n; }
 
+function simplifyFrac(n, d){
+  if(n === 0) return [0,1];
+  if(d < 0){ n = -n; d = -d; }
+  var g = gcd(Math.abs(n), d);
+  return [n/g, d/g];
+}
+function fmtFrac(n, d){
+  if(d === 1) return (n<0?'−'+(-n):String(n));
+  if(n === 0) return '0';
+  var sign = '';
+  if(n < 0){ sign = '−'; n = -n; }
+  return sign + '<span class="frac"><span class="num">'+n+'</span><span class="den">'+d+'</span></span>';
+}
+function parFrac(n, d){
+  // wrap with parens for use inside operations
+  return '(' + fmtFrac(n, d) + ')';
+}
+function makeFracOptions(n, d){
+  var correct = fmtFrac(n, d);
+  var set = {}; set[correct] = true;
+  var tries = 0;
+  while(Object.keys(set).length < 4 && tries < 80){
+    tries++;
+    var pick = Math.floor(Math.random()*6);
+    var nn = n, dd = d;
+    if(pick===0) nn = n + randInt(-2,2,[0]);
+    else if(pick===1) nn = -n;
+    else if(pick===2) dd = d + randInt(1,2);
+    else if(pick===3){ nn = n + 1; dd = d; }
+    else if(pick===4){ nn = n - 1; dd = d; }
+    else { nn = n; dd = Math.max(2, d + randInt(-1,2,[0])); }
+    if(dd <= 0) continue;
+    var s = simplifyFrac(nn, dd);
+    var html = fmtFrac(s[0], s[1]);
+    if(html === correct) continue;
+    set[html] = true;
+  }
+  var arr = Object.keys(set);
+  var pad = 1;
+  while(arr.length < 4){
+    var s2 = simplifyFrac(n + pad, d + 1);
+    var h = fmtFrac(s2[0], s2[1]);
+    if(!set[h]){ set[h] = true; arr.push(h); }
+    pad++;
+  }
+  return arr.sort(function(){return 0.5-Math.random()});
+}
+
 function generateMathQuestions(){
   var templates = [
+    // 1) 정수 덧셈·뺄셈 (2항)
     function(){
       var a = randInt(-15,15,[0]), b = randInt(-15,15,[0]);
       var plus = Math.random() > 0.5;
@@ -1093,6 +1243,7 @@ function generateMathQuestions(){
       var ans = plus ? (a+b) : (a-b);
       return { question:q, answer:String(ans), type:'정수의 덧셈·뺄셈' };
     },
+    // 2) 정수 곱셈/나눗셈
     function(){
       if(Math.random()>0.5){
         var a = randInt(-9,9,[0,1,-1]), b = randInt(-9,9,[0,1,-1]);
@@ -1104,6 +1255,7 @@ function generateMathQuestions(){
         return { question:'('+fmtNum(aa)+') ÷ ('+fmtNum(bb)+')', answer:String(ans), type:'정수의 나눗셈' };
       }
     },
+    // 3) 절댓값 비교
     function(){
       var isMax = Math.random()>0.5;
       var candidates = [
@@ -1122,6 +1274,7 @@ function generateMathQuestions(){
         type:'절댓값 비교'
       };
     },
+    // 4) 유리수 덧셈 (분모 다른 분수)
     function(){
       var denoms = [2,3,4,6];
       var d1 = denoms[Math.floor(Math.random()*denoms.length)];
@@ -1131,13 +1284,13 @@ function generateMathQuestions(){
       var cd = lcm(d1,d2);
       var num1 = n1*(cd/d1), num2 = n2*(cd/d2);
       var fn = num1+num2;
-      var g = gcd(Math.abs(fn)||1, cd);
-      var rn = fn/g, rd = cd/g;
-      var ans = (rd===1) ? String(rn) : (rn+'/'+rd);
+      var s = simplifyFrac(fn, cd);
       var sign = n2<0 ? '−' : '+';
-      var q = '('+n1+'/'+d1+') '+sign+' ('+Math.abs(n2)+'/'+d2+')';
-      return { question:q, answer:ans, type:'유리수 연산' };
+      var q = parFrac(n1,d1)+' '+sign+' '+parFrac(Math.abs(n2),d2);
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 덧셈' };
     },
+    // 5) 거듭제곱 혼합 계산
     function(){
       var base = randInt(-3,3,[0,1,-1]);
       var exp = Math.random()>0.5 ? 2 : 3;
@@ -1150,16 +1303,110 @@ function generateMathQuestions(){
         answer: String(ans),
         type:'거듭제곱 혼합 계산'
       };
+    },
+    // 6) 정수 3항 덧뺄셈
+    function(){
+      var a = randInt(-12,12,[0]), b = randInt(-12,12,[0]), c = randInt(-12,12,[0]);
+      var ans = a + b - c;
+      var q = '('+fmtNum(a)+') + ('+fmtNum(b)+') − ('+fmtNum(c)+')';
+      return { question:q, answer:String(ans), type:'정수의 덧셈·뺄셈' };
+    },
+    // 7) 정수 곱셈 체인
+    function(){
+      var a = randInt(-6,6,[0,1,-1]);
+      var b = randInt(-5,5,[0,1,-1]);
+      var c = randInt(-4,4,[0,1,-1]);
+      var ans = a*b*c;
+      return { question:'('+fmtNum(a)+') × ('+fmtNum(b)+') × ('+fmtNum(c)+')',
+               answer:String(ans), type:'정수의 곱셈' };
+    },
+    // 8) 정수 혼합 (a×b + c)
+    function(){
+      var a = randInt(-9,9,[0,1,-1]), b = randInt(-6,6,[0,1,-1]), c = randInt(-15,15,[0]);
+      var ans = a*b + c;
+      return { question:'('+fmtNum(a)+') × ('+fmtNum(b)+') + ('+fmtNum(c)+')',
+               answer:String(ans), type:'정수의 혼합 계산' };
+    },
+    // 9) 정수 혼합 (a÷b + c, a는 b의 배수)
+    function(){
+      var b = randInt(-9,9,[0,1,-1]);
+      var q1 = randInt(-9,9,[0]);
+      var c = randInt(-9,9,[0]);
+      var a = b*q1;
+      var ans = q1 + c;
+      return { question:'('+fmtNum(a)+') ÷ ('+fmtNum(b)+') + ('+fmtNum(c)+')',
+               answer:String(ans), type:'정수의 혼합 계산' };
+    },
+    // 10) 절댓값 계산 |a + b|
+    function(){
+      var a = randInt(-12,12,[0]), b = randInt(-12,12,[0]);
+      var ans = Math.abs(a+b);
+      return { question:'|('+fmtNum(a)+') + ('+fmtNum(b)+')|',
+               answer:String(ans), type:'절댓값 계산' };
+    },
+    // 11) 유리수 뺄셈
+    function(){
+      var denoms = [2,3,4,5,6];
+      var d1 = denoms[Math.floor(Math.random()*denoms.length)];
+      var d2 = denoms[Math.floor(Math.random()*denoms.length)];
+      var n1 = randInt(-5,5,[0]), n2 = randInt(-5,5,[0]);
+      var cd = lcm(d1,d2);
+      var num = n1*(cd/d1) - n2*(cd/d2);
+      var s = simplifyFrac(num, cd);
+      var q = parFrac(n1,d1)+' − '+parFrac(n2,d2);
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 뺄셈' };
+    },
+    // 12) 유리수 곱셈
+    function(){
+      var d1 = randInt(2,6), d2 = randInt(2,6);
+      var n1 = randInt(-5,5,[0]), n2 = randInt(-5,5,[0]);
+      var s = simplifyFrac(n1*n2, d1*d2);
+      var q = parFrac(n1,d1)+' × '+parFrac(n2,d2);
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 곱셈' };
+    },
+    // 13) 유리수 나눗셈
+    function(){
+      var d1 = randInt(2,6), d2 = randInt(2,6);
+      var n1 = randInt(-5,5,[0]), n2 = randInt(-5,5,[0]);
+      var num = n1*d2, den = d1*n2;
+      if(den < 0){ num = -num; den = -den; }
+      var s = simplifyFrac(num, den);
+      var q = parFrac(n1,d1)+' ÷ '+parFrac(n2,d2);
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 나눗셈' };
+    },
+    // 14) 정수 + 분수
+    function(){
+      var a = randInt(-5,5,[0]);
+      var d = randInt(2,6);
+      var n = randInt(-5,5,[0]);
+      var s = simplifyFrac(a*d + n, d);
+      var q = '('+fmtNum(a)+') + '+parFrac(n,d);
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 덧셈' };
+    },
+    // 15) 분수 × 정수
+    function(){
+      var d = randInt(2,6);
+      var n = randInt(-5,5,[0]);
+      var k = randInt(-6,6,[0,1,-1]);
+      var s = simplifyFrac(n*k, d);
+      var q = parFrac(n,d)+' × ('+fmtNum(k)+')';
+      return { question:q, answer:fmtFrac(s[0],s[1]),
+               options:makeFracOptions(s[0],s[1]), type:'유리수의 곱셈' };
     }
   ];
   var out = [];
   for(var i=0;i<5;i++){
-    var q = templates[i%templates.length]();
+    var q = templates[Math.floor(Math.random()*templates.length)]();
     if(!q.options) q.options = makeOptions(q.answer);
     out.push(q);
   }
   return out;
 }
+
 function makeOptions(correct){
   var set = {};
   set[correct] = true;
@@ -1215,6 +1462,7 @@ function renderMath(){
       var btn = document.createElement('button');
       btn.className = 'math-option';
       btn.innerHTML = opt;
+      btn.setAttribute('data-value', opt);
       btn.onclick = function(){ submitMathAnswer(opt, btn); };
       opts.appendChild(btn);
     })(q.options[i]);
@@ -1232,8 +1480,7 @@ function submitMathAnswer(opt, btn){
     // also highlight correct option
     var siblings = btn.parentElement.querySelectorAll('.math-option');
     for(var i=0;i<siblings.length;i++){
-      if(siblings[i].textContent.trim() === String(q.answer).trim()
-         || siblings[i].innerHTML === q.answer){
+      if(siblings[i].getAttribute('data-value') === q.answer){
         siblings[i].classList.add('correct');
       }
     }
@@ -1502,6 +1749,426 @@ window.submitDrawing = submitDrawing;
 window.afterProcessing = afterProcessing;
 window.submitGuess = submitGuess;
 window.resetGame = resetGame;
+
+
+/* =========================================================
+ * TOPIC SELECT (added, non-invasive)
+ * ========================================================= */
+var selectedTopic = 'integer'; // default
+
+function selectTopic(topic){
+  selectedTopic = topic;
+  var labels = {
+    'integer':'정수와 유리수',
+    'linear':'일차식의 계산',
+    'equation':'일차방정식의 계산',
+    'coord':'좌표평면과 그래프'
+  };
+  var setupCount = document.getElementById('setup-player-count');
+  // keep PLAYERS count text but prepend domain label by updating a chip if present
+  // we instead update the topic-chip if user returns
+  var tc = document.getElementById('topic-chip');
+  if(tc) tc.textContent = 'DOMAIN · ' + labels[topic];
+  // remember a label for showing on math gate as eyebrow tag
+  window.__topicLabel = labels[topic];
+  try{ playSound('click'); }catch(e){}
+  switchScreen('screen-setup');
+}
+
+/* ---------- Helpers reused / added ---------- */
+function _fmtNum(v){ return v<0 ? '−'+(-v) : ''+v; }
+function _coefTerm(c, first){
+  if(c===0) return '';
+  if(first){
+    if(c===1) return 'x';
+    if(c===-1) return '−x';
+    return (c>0 ? ''+c : '−'+(-c)) + 'x';
+  }
+  if(c===1)  return '+ x';
+  if(c===-1) return '− x';
+  return (c>0 ? '+ '+c : '− '+(-c)) + 'x';
+}
+function _constTerm(b, first){
+  if(b===0) return '';
+  if(first) return b>0 ? ''+b : '−'+(-b);
+  return b>0 ? '+ '+b : '− '+(-b);
+}
+function _linExpr(a,b){
+  if(a===0 && b===0) return '0';
+  if(a===0) return _constTerm(b,true);
+  if(b===0) return _coefTerm(a,true);
+  return _coefTerm(a,true) + ' ' + _constTerm(b,false);
+}
+function _wrapK(k, expr){
+  if(k===1)  return '('+expr+')';
+  if(k===-1) return '−('+expr+')';
+  if(k<0)    return '(−'+(-k)+')('+expr+')';
+  return k+'('+expr+')';
+}
+function _numStr(n){ return n>=0 ? ''+n : '−'+(-n); }
+
+function _shuffle(arr){
+  return arr.slice().sort(function(){return 0.5 - Math.random();});
+}
+function _uniqAdd(set, v){ if(!(v in set)){ set[v]=true; return true; } return false; }
+
+/* Distractors for a linear expression answer (ax + b form) */
+function _linOptions(a, b){
+  var correct = _linExpr(a,b);
+  var set = {}; set[correct] = true;
+  var tries = 0;
+  while(Object.keys(set).length < 4 && tries < 80){
+    tries++;
+    var da = randInt(-2,2,[0]);
+    var db = randInt(-3,3,[0]);
+    var na = a + da, nb = b + db;
+    // also try sign flips
+    var picks = [
+      [na, b], [a, nb], [na, nb],
+      [-a, b], [a, -b], [-a, -b]
+    ];
+    var p = picks[Math.floor(Math.random()*picks.length)];
+    var s = _linExpr(p[0], p[1]);
+    set[s] = true;
+  }
+  // ensure 4 entries
+  var keys = Object.keys(set);
+  while(keys.length < 4){
+    set[_linExpr(a + keys.length, b + (keys.length%2 ? 1 : -1))] = true;
+    keys = Object.keys(set);
+  }
+  return keys.slice(0,4).sort(function(){return 0.5-Math.random();});
+}
+
+/* Distractors for "(x, y)" coordinate answer */
+function _coordOptions(x, y){
+  var correct = '('+_numStr(x)+', '+_numStr(y)+')';
+  var set = {}; set[correct] = true;
+  var picks = [
+    [-x,y],[x,-y],[-x,-y],[y,x],[-y,x],[y,-x]
+  ];
+  for(var i=0;i<picks.length && Object.keys(set).length<4;i++){
+    set['('+_numStr(picks[i][0])+', '+_numStr(picks[i][1])+')'] = true;
+  }
+  var keys = Object.keys(set);
+  while(keys.length < 4){
+    keys.push('('+_numStr(x + keys.length)+', '+_numStr(y - keys.length)+')');
+    set[keys[keys.length-1]] = true;
+    keys = Object.keys(set);
+  }
+  return Object.keys(set).slice(0,4).sort(function(){return 0.5-Math.random();});
+}
+
+/* =========================================================
+ * 일차식의 계산 (linear expression)
+ * ========================================================= */
+var linearTemplates = [
+  // 1) 동류항 정리: ax + bx
+  function(){
+    var a = randInt(-9,9,[0]);
+    var b = randInt(-9,9,[0,-a]);
+    var q = _coefTerm(a,true) + ' ' + _coefTerm(b,false);
+    var ans = _linExpr(a+b,0);
+    return { question:q, answer:ans, options:_linOptions(a+b,0), type:'동류항 정리' };
+  },
+  // 2) ax + b + cx + d
+  function(){
+    var a = randInt(-6,6,[0]);
+    var c = randInt(-6,6,[0,-a]);
+    var b = randInt(-9,9,[0]);
+    var d = randInt(-9,9,[0,-b]);
+    var q = _coefTerm(a,true)+' '+_constTerm(b,false)+' '+_coefTerm(c,false)+' '+_constTerm(d,false);
+    var A = a+c, B = b+d;
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'일차식의 덧셈·뺄셈' };
+  },
+  // 3) k(ax+b)
+  function(){
+    var k = randInt(-5,5,[0,1,-1]);
+    var a = randInt(-5,5,[0]);
+    var b = randInt(-9,9,[0]);
+    var q = _wrapK(k, _linExpr(a,b));
+    var A = k*a, B = k*b;
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'분배법칙' };
+  },
+  // 4) m(ax+b) + n(cx+d)
+  function(){
+    var m = randInt(-4,4,[0,1,-1]);
+    var n = randInt(-4,4,[0,1,-1]);
+    var a = randInt(-4,4,[0]); var b = randInt(-6,6,[0]);
+    var c = randInt(-4,4,[0]); var d = randInt(-6,6,[0]);
+    var A = m*a + n*c, B = m*b + n*d;
+    if(A===0 && B===0){ A=1; B=0; }
+    var q = _wrapK(m,_linExpr(a,b)) + ' + ' + _wrapK(n,_linExpr(c,d));
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'분배법칙과 동류항' };
+  },
+  // 5) (ax+b) ÷ k  with k | a and k | b
+  function(){
+    var k = randInt(-5,5,[0,1,-1]);
+    var qa = randInt(-5,5,[0]); var qb = randInt(-5,5,[0]);
+    var a = k*qa, b = k*qb;
+    var ks = k>0 ? ''+k : '(−'+(-k)+')';
+    var q = '('+_linExpr(a,b)+') ÷ '+ks;
+    return { question:q, answer:_linExpr(qa,qb), options:_linOptions(qa,qb), type:'일차식의 나눗셈' };
+  },
+  // 6) -(ax+b) + cx + d
+  function(){
+    var a = randInt(-5,5,[0]); var b = randInt(-6,6,[0]);
+    var c = randInt(-5,5,[0]); var d = randInt(-6,6,[0]);
+    var A = -a + c, B = -b + d;
+    if(A===0 && B===0){ A=1; }
+    var tail = '';
+    if(c!==0) tail += ' ' + _coefTerm(c,false);
+    if(d!==0) tail += ' ' + _constTerm(d,false);
+    var q = '−('+_linExpr(a,b)+')'+tail;
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'부호 처리' };
+  },
+  // 7) 계수 곱: k × x  와 상수항 결합 → kx + c  형태 빈출
+  function(){
+    var k = randInt(-6,6,[0,1,-1]);
+    var c = randInt(-9,9,[0]);
+    var a = randInt(-5,5,[0]);
+    // kx + ax + c = (k+a)x + c
+    var A = k+a, B = c;
+    var ks = k>0 ? ''+k : '(−'+(-k)+')';
+    var q = ks+'x + ' + _coefTerm(a,true) + ' ' + _constTerm(c,false);
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'일차식 정리' };
+  },
+  // 8) k(ax + b) − cx (분배 후 정리)
+  function(){
+    var k = randInt(-4,4,[0,1,-1]);
+    var a = randInt(-4,4,[0]); var b = randInt(-6,6,[0]);
+    var c = randInt(-5,5,[0]);
+    var A = k*a - c, B = k*b;
+    if(A===0 && B===0){ A=1; }
+    var q = _wrapK(k,_linExpr(a,b)) + ' ' + _coefTerm(-c,false);
+    return { question:q, answer:_linExpr(A,B), options:_linOptions(A,B), type:'분배 후 정리' };
+  }
+];
+
+/* =========================================================
+ * 일차방정식의 계산
+ * ========================================================= */
+var equationTemplates = [
+  // 1) ax + b = c (이항)
+  function(){
+    var a = randInt(-6,6,[0,1,-1]);
+    var x = randInt(-6,6,[0]);
+    var b = randInt(-9,9,[0]);
+    var c = a*x + b;
+    var as = a>0 ? ''+a : '(−'+(-a)+')';
+    var bs = b>0 ? '+ '+b : '− '+(-b);
+    var q = as+'x '+bs+' = '+_numStr(c);
+    return { question:q, answer:''+x, type:'일차방정식 (이항)' };
+  },
+  // 2) ax + b = cx + d
+  function(){
+    var x = randInt(-6,6,[0]);
+    var a = randInt(-6,6,[0,1,-1]);
+    var c = randInt(-6,6,[0,a]);
+    var b = randInt(-9,9,[0]);
+    var d = (a-c)*x + b;
+    var q = _linExpr(a,b) + ' = ' + _linExpr(c,d);
+    return { question:q, answer:''+x, type:'양변에 미지수' };
+  },
+  // 3) k(x + a) = b
+  function(){
+    var k = randInt(-5,5,[0,1,-1]);
+    var x = randInt(-5,5,[0]);
+    var a = randInt(-6,6,[0]);
+    var b = k*(x+a);
+    var ks = k>0 ? ''+k : '(−'+(-k)+')';
+    var sa = a>0 ? '+ '+a : '− '+(-a);
+    var q = ks+'(x '+sa+') = '+_numStr(b);
+    return { question:q, answer:''+x, type:'괄호가 있는 방정식' };
+  },
+  // 4) ax + b + cx = d  (동류항 정리 후)
+  function(){
+    var a = randInt(-4,4,[0]);
+    var c = randInt(-4,4,[0,-a]);
+    var x = randInt(-6,6,[0]);
+    var b = randInt(-6,6,[0]);
+    var d = (a+c)*x + b;
+    var q = _coefTerm(a,true)+' '+_constTerm(b,false)+' '+_coefTerm(c,false)+' = '+_numStr(d);
+    return { question:q, answer:''+x, type:'동류항 정리 후 풀이' };
+  },
+  // 5) k(x - p) = q(x + r) form
+  function(){
+    var x = randInt(-5,5,[0]);
+    var k = randInt(-4,4,[0,1,-1]);
+    var q = randInt(-4,4,[0,1,-1,k]);
+    var p = randInt(-5,5,[0]);
+    // k(x-p) = q(x+r)  =>  (k-q)x = kp + qr; choose r so x is integer
+    // simpler: build LHS = k(x+p), RHS = qx + d; pick d so x = x0
+    var d = (k - q)*x + k*p;
+    var ks = k>0 ? ''+k : '(−'+(-k)+')';
+    var qs = q>0 ? ''+q : '(−'+(-q)+')';
+    var ps = p>0 ? '+ '+p : '− '+(-p);
+    var lhs = ks+'(x '+ps+')';
+    var rhs = qs+'x ' + (d>=0 ? '+ '+d : '− '+(-d));
+    return { question: lhs+' = '+rhs, answer:''+x, type:'괄호 풀고 정리' };
+  },
+  // 6) ax = b (간단형, 답이 정수)
+  function(){
+    var a = randInt(-9,9,[0,1,-1]);
+    var x = randInt(-9,9,[0]);
+    var b = a*x;
+    var as = a>0 ? ''+a : '(−'+(-a)+')';
+    return { question: as+'x = '+_numStr(b), answer:''+x, type:'양변을 나누어 풀이' };
+  }
+];
+
+/* =========================================================
+ * 좌표평면과 그래프
+ * ========================================================= */
+var coordTemplates = [
+  // 1) 사분면 판별
+  function(){
+    var x = randInt(-6,6,[0]); var y = randInt(-6,6,[0]);
+    var q;
+    if(x>0 && y>0) q = 1; else if(x<0 && y>0) q = 2; else if(x<0 && y<0) q = 3; else q = 4;
+    return {
+      question:'점 P('+_numStr(x)+', '+_numStr(y)+')은 제몇 사분면 위의 점인가?',
+      answer:'제'+q+'사분면',
+      options:['제1사분면','제2사분면','제3사분면','제4사분면'],
+      type:'사분면 판별'
+    };
+  },
+  // 2) 좌표축·원점 판별
+  function(){
+    var c = Math.floor(Math.random()*3);
+    var x,y;
+    if(c===0){ x = randInt(-6,6,[0]); y = 0; }
+    else if(c===1){ x = 0; y = randInt(-6,6,[0]); }
+    else { x = 0; y = 0; }
+    var ans = (x===0 && y===0) ? '원점' : (y===0 ? 'x축 위' : 'y축 위');
+    return {
+      question:'점 ('+_numStr(x)+', '+_numStr(y)+')은 어디에 있는가?',
+      answer:ans,
+      options:['x축 위','y축 위','원점','어느 사분면에도 속하지 않음'],
+      type:'좌표축·원점'
+    };
+  },
+  // 3) x축 대칭이동
+  function(){
+    var x = randInt(-6,6,[0]); var y = randInt(-6,6,[0]);
+    var sx = x, sy = -y;
+    return {
+      question:'점 ('+_numStr(x)+', '+_numStr(y)+')을 x축에 대하여 대칭이동한 점의 좌표는?',
+      answer:'('+_numStr(sx)+', '+_numStr(sy)+')',
+      options:_coordOptions(sx,sy),
+      type:'x축 대칭이동'
+    };
+  },
+  // 4) y축 대칭이동
+  function(){
+    var x = randInt(-6,6,[0]); var y = randInt(-6,6,[0]);
+    var sx = -x, sy = y;
+    return {
+      question:'점 ('+_numStr(x)+', '+_numStr(y)+')을 y축에 대하여 대칭이동한 점의 좌표는?',
+      answer:'('+_numStr(sx)+', '+_numStr(sy)+')',
+      options:_coordOptions(sx,sy),
+      type:'y축 대칭이동'
+    };
+  },
+  // 5) 원점 대칭이동
+  function(){
+    var x = randInt(-6,6,[0]); var y = randInt(-6,6,[0]);
+    var sx = -x, sy = -y;
+    return {
+      question:'점 ('+_numStr(x)+', '+_numStr(y)+')을 원점에 대하여 대칭이동한 점의 좌표는?',
+      answer:'('+_numStr(sx)+', '+_numStr(sy)+')',
+      options:_coordOptions(sx,sy),
+      type:'원점 대칭이동'
+    };
+  },
+  // 6) 사분면별 부호
+  function(){
+    var q = randInt(1,4);
+    var opts = ['a>0, b>0','a<0, b>0','a<0, b<0','a>0, b<0'];
+    return {
+      question:'제'+q+'사분면 위의 점 P(a, b)에 대하여 a, b의 부호는?',
+      answer:opts[q-1],
+      options:opts,
+      type:'사분면과 부호'
+    };
+  },
+  // 7) 두 점 사이 거리 (같은 축)
+  function(){
+    var sameX = Math.random() < 0.5;
+    var x1,y1,x2,y2,ans;
+    if(sameX){
+      x1 = randInt(-5,5,[0]); x2 = x1;
+      y1 = randInt(-6,6,[0]); y2 = randInt(-6,6,[0,y1]);
+      ans = Math.abs(y1-y2);
+    } else {
+      y1 = randInt(-5,5,[0]); y2 = y1;
+      x1 = randInt(-6,6,[0]); x2 = randInt(-6,6,[0,x1]);
+      ans = Math.abs(x1-x2);
+    }
+    var opts = {};
+    opts[''+ans] = true;
+    var tries = 0;
+    while(Object.keys(opts).length < 4 && tries < 50){
+      tries++;
+      var v = ans + randInt(-3,3,[0]);
+      if(v>0) opts[''+v] = true;
+    }
+    var i2=1;
+    while(Object.keys(opts).length < 4){ opts[''+(ans + i2)] = true; i2++; }
+    return {
+      question:'두 점 ('+_numStr(x1)+', '+_numStr(y1)+'), ('+_numStr(x2)+', '+_numStr(y2)+') 사이의 거리는?',
+      answer:''+ans,
+      options:Object.keys(opts).slice(0,4).sort(function(){return 0.5-Math.random();}),
+      type:'두 점 사이 거리'
+    };
+  },
+  // 8) 순서쌍에서 좌표 읽기 (x좌표 / y좌표)
+  function(){
+    var x = randInt(-7,7,[0]); var y = randInt(-7,7,[0]);
+    var asX = Math.random()<0.5;
+    var ans = asX ? x : y;
+    var opts = {};
+    opts[_numStr(ans)] = true;
+    var pool = [x,y,-x,-y,x+1,y-1,x-2,y+2];
+    for(var i=0;i<pool.length && Object.keys(opts).length<4;i++){
+      opts[_numStr(pool[i])] = true;
+    }
+    return {
+      question:'점 ('+_numStr(x)+', '+_numStr(y)+')의 '+(asX?'x':'y')+'좌표는?',
+      answer:_numStr(ans),
+      options:Object.keys(opts).slice(0,4).sort(function(){return 0.5-Math.random();}),
+      type:'좌표 읽기'
+    };
+  }
+];
+
+/* ---------- Generator dispatcher (wraps existing) ---------- */
+var __origGenerateMathQuestions = generateMathQuestions;
+generateMathQuestions = function(){
+  var topic = selectedTopic || 'integer';
+  if(topic === 'integer') return __origGenerateMathQuestions();
+  var pool;
+  if(topic === 'linear')   pool = linearTemplates;
+  else if(topic === 'equation') pool = equationTemplates;
+  else if(topic === 'coord')    pool = coordTemplates;
+  else return __origGenerateMathQuestions();
+
+  var out = [];
+  var usedTypes = {};
+  var safety = 0;
+  while(out.length < 5 && safety < 50){
+    safety++;
+    var t = pool[Math.floor(Math.random()*pool.length)];
+    var q = t();
+    // try to vary types in the 5 questions
+    if(usedTypes[q.type] && safety < 25) continue;
+    if(!q.options) q.options = makeOptions(q.answer);
+    out.push(q);
+    usedTypes[q.type] = true;
+  }
+  return out;
+};
+
 </script>
 </body>
 </html>
